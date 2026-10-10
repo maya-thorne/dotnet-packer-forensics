@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 380" width="100%" height="100%">
+  <defs>
+    <linearGradient id="termGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#070a14"/>
+      <stop offset="100%" stop-color="#020409"/>
+    </linearGradient>
+    <filter id="termGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="920" height="380" rx="12" fill="url(#termGrad)"/>
+  <rect x="1" y="1" width="918" height="378" rx="11" fill="none" stroke="#1e293b" stroke-width="1.3"/>
+
+  <!-- Window Header -->
+  <rect width="920" height="36" rx="12" fill="#0f172a"/>
+  <rect y="24" width="920" height="12" fill="#0f172a"/>
+  <circle cx="22" cy="18" r="5.5" fill="#ef4444"/>
+  <circle cx="38" cy="18" r="5.5" fill="#f59e0b"/>
+  <circle cx="54" cy="18" r="5.5" fill="#10b981"/>
+  <text x="460" y="23" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700" text-anchor="middle">
+    PowerShell 7 · dotnet-packer-re (v1.0.0) Forensic Unpacker Demo
+  </text>
+  <line x1="0" y1="36" x2="920" y2="36" stroke="#1e293b" stroke-width="1"/>
+
+  <!-- Terminal Output Code -->
+  <g transform="translate(24, 60)" font-family="Consolas, monospace" font-size="11.5">
+    <text y="18" fill="#38bdf8">&gt; python -m dotnet_deobfuscator samples\xorPacker_sample.exe -o payload.bin -v</text>
+    <text y="42" fill="#64748b">==============================================================================</text>
+    <text y="62" fill="#34d399" font-weight="700">[dotnet-packer-re v1.0.0] Static Forensic Analysis Report</text>
+    <text y="82" fill="#64748b">==============================================================================</text>
+    <text y="104" fill="#e2e8f0">Target File     : samples\xorPacker_sample.exe</text>
+    <text y="124" fill="#e2e8f0">File Size       : 7,528 bytes | Elapsed Time: 0.298 ms</text>
+    <text y="144" fill="#e2e8f0">PE Binary       : <tspan fill="#34d399">YES</tspan> | .NET Assembly : <tspan fill="#34d399">YES</tspan> | Entropy: 4.991 / 8.000</text>
+    
+    <text y="174" fill="#818cf8" font-weight="700">--- [Protector Detections] ---</text>
+    <text y="194" fill="#e2e8f0">  [+] xorPacker (PE Overlay Packer) - Confidence: <tspan fill="#34d399">HIGH</tspan></text>
+    <text y="212" fill="#94a3b8">      Matched Tokens: ***, xorStub</text>
+
+    <text y="240" fill="#c084fc" font-weight="700">--- [PE Overlay Forensics &amp; Dual-XOR Inversion] ---</text>
+    <text y="260" fill="#e2e8f0">  [+] Sentinel Located at Offset : <tspan fill="#f59e0b">0x1C00 ('***')</tspan></text>
+    <text y="278" fill="#e2e8f0">  [+] Recovered Dynamic Key     : <tspan fill="#38bdf8">'TargetSessionKey_2026'</tspan></text>
+    <text y="296" fill="#34d399">  [+] Successfully extracted unpacked payload -&gt; payload.bin (Bitwise Verified PE)</text>
+  </g>
+</svg>
