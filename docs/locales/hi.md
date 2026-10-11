@@ -25,7 +25,10 @@
 
 ---
 
-## 🏛️ 1. Architecture & Forensic Pipeline
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">🏛️ 1. आर्किटेक्चर और फोरेंसिक पाइपलाइन</h2></summary>
+
+<br />
 
 `dotnet-packer-forensics` एक शून्य-निर्भरता पायथन रिवर्स इंजीनियरिंग इंजन है जो पीई ओवरले निकालने, दो-चरणीय एक्सओआर सिफर को उलटने और 8 प्रमुख .NET संरक्षकों के मेटाडेटा का विश्लेषण करने के लिए डिज़ाइन किया गया है।
 
@@ -33,9 +36,14 @@
   <a href="https://github.com/maya-thorne/dotnet-packer-forensics"><img src="../assets/locales/hi/architecture_diagram.svg" alt="Architecture Diagram" width="100%" /></a>
 </p>
 
+</details>
+
 ---
 
-## 💻 2. 🛠️ सीएलआई टूलचेन और उपयोग गाइड
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">💻 2. सीएलआई टूलचेन और उपयोग गाइड</h2></summary>
+
+<br />
 
 <p align="center">
   <img src="../assets/demo_terminal.svg" alt="Terminal Demo" width="100%" />
@@ -64,9 +72,14 @@ python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.e
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
 | `--version` | Display engine version and exit | `v1.0.0` |
 
+</details>
+
 ---
 
-## 📚 3. 📚 मुख्य अनुसंधान श्वेतपत्र
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">📚 3. मुख्य अनुसंधान श्वेतपत्र</h2></summary>
+
+<br />
 
 <table width="100%">
   <thead>
@@ -95,8 +108,15 @@ python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.e
   </tbody>
 </table>
 
+</details>
+
 ---
 
-## 📜 4. 📜 लाइसेंस और अनुसंधान श्रेय
+<details>
+<summary><h2 style="display:inline-block; margin:0;">📜 4. लाइसेंस और अनुसंधान श्रेय</h2></summary>
+
+<br />
 
 This project is licensed under the **Maya Thorne Systems &amp; Security Research License (MT-SRL)**. Copyright © 2026 Maya Thorne. All rights reserved. Published strictly for academic analysis, vulnerability research, and systems engineering.
+
+</details>

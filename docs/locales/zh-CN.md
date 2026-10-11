@@ -25,7 +25,10 @@
 
 ---
 
-## 🏛️ 1. Architecture & Forensic Pipeline
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">🏛️ 1. 架构设计与取证流水线</h2></summary>
+
+<br />
 
 `dotnet-packer-forensics` 提供零外部依赖的高性能 Python 逆向工程引擎，专门用于 PE 叠加层提取、双重 XOR 密码反转（xorPacker）以及 8 大主流 .NET 保护器（ConfuserEx、.NET Reactor、Eazfuscator、Babel 等）的 CIL 元数据流与节区信息熵深度分析。
 
@@ -33,9 +36,14 @@
   <a href="https://github.com/maya-thorne/dotnet-packer-forensics"><img src="../assets/locales/zh-CN/architecture_diagram.svg" alt="Architecture Diagram" width="100%" /></a>
 </p>
 
+</details>
+
 ---
 
-## 💻 2. 🛠️ CLI 工具链与使用指南
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">💻 2. CLI 工具链与使用指南</h2></summary>
+
+<br />
 
 <p align="center">
   <img src="../assets/demo_terminal.svg" alt="Terminal Demo" width="100%" />
@@ -64,9 +72,14 @@ python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.e
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
 | `--version` | Display engine version and exit | `v1.0.0` |
 
+</details>
+
 ---
 
-## 📚 3. 📚 核心研究白皮书索引
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">📚 3. 核心研究白皮书索引</h2></summary>
+
+<br />
 
 <table width="100%">
   <thead>
@@ -95,8 +108,15 @@ python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.e
   </tbody>
 </table>
 
+</details>
+
 ---
 
-## 📜 4. 📜 许可证与安全研究致谢
+<details>
+<summary><h2 style="display:inline-block; margin:0;">📜 4. 许可证与安全研究致谢</h2></summary>
+
+<br />
 
 This project is licensed under the **Maya Thorne Systems &amp; Security Research License (MT-SRL)**. Copyright © 2026 Maya Thorne. All rights reserved. Published strictly for academic analysis, vulnerability research, and systems engineering.
+
+</details>

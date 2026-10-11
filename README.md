@@ -25,7 +25,10 @@
 
 ---
 
-## 🏛️ 1. Architecture & Forensic Pipeline
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">🏛️ 1. Architecture &amp; Forensic Pipeline</h2></summary>
+
+<br />
 
 `dotnet-packer-forensics` delivers a zero-dependency Python reverse engineering engine designed to extract PE overlays, invert two-stage XOR ciphers (xorPacker), and inspect .NET CIL metadata and section entropy across 8 flagship protectors (ConfuserEx, .NET Reactor, Eazfuscator, Babel, ArmDot, etc.).
 
@@ -33,9 +36,14 @@
   <a href="https://github.com/maya-thorne/dotnet-packer-forensics"><img src="./docs/assets/locales/en/architecture_diagram.svg" alt="Architecture Diagram" width="100%" /></a>
 </p>
 
+</details>
+
 ---
 
-## 💻 2. 🛠️ CLI Toolchain & Usage Guide
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">💻 2. CLI Toolchain &amp; Usage Guide</h2></summary>
+
+<br />
 
 <p align="center">
   <img src="./docs/assets/demo_terminal.svg" alt="Terminal Demo" width="100%" />
@@ -64,9 +72,14 @@ python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.e
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
 | `--version` | Display engine version and exit | `v1.0.0` |
 
+</details>
+
 ---
 
-## 📚 3. 📚 Core Research Whitepapers
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">📚 3. Core Research Whitepapers</h2></summary>
+
+<br />
 
 <table width="100%">
   <thead>
@@ -95,8 +108,15 @@ python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.e
   </tbody>
 </table>
 
+</details>
+
 ---
 
-## 📜 4. 📜 License & Security Research Attribution
+<details>
+<summary><h2 style="display:inline-block; margin:0;">📜 4. License &amp; Security Research Attribution</h2></summary>
+
+<br />
 
 This project is licensed under the **Maya Thorne Systems &amp; Security Research License (MT-SRL)**. Copyright © 2026 Maya Thorne. All rights reserved. Published strictly for academic analysis, vulnerability research, and systems engineering.
+
+</details>

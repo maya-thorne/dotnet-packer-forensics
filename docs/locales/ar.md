@@ -25,7 +25,10 @@
 
 ---
 
-## 🏛️ 1. Architecture & Forensic Pipeline
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">🏛️ 1. البنية المعمارية ومسار التحليل الجنائي</h2></summary>
+
+<br />
 
 يوفر `dotnet-packer-forensics` محرك هندسة عكسية بلغة بايثون بدون أي مكتبات خارجية لاستخراج تراكبات PE وعكس تشفير XOR المزدوج وتحليل الإنتروبيا وبيانات CIL لـ 8 أدوات حماية رئيسية.
 
@@ -33,9 +36,14 @@
   <a href="https://github.com/maya-thorne/dotnet-packer-forensics"><img src="../assets/locales/ar/architecture_diagram.svg" alt="Architecture Diagram" width="100%" /></a>
 </p>
 
+</details>
+
 ---
 
-## 💻 2. 🛠️ سلسلة أدوات CLI ودليل الاستخدام
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">💻 2. سلسلة أدوات CLI ودليل الاستخدام</h2></summary>
+
+<br />
 
 <p align="center">
   <img src="../assets/demo_terminal.svg" alt="Terminal Demo" width="100%" />
@@ -64,9 +72,14 @@ python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.e
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
 | `--version` | Display engine version and exit | `v1.0.0` |
 
+</details>
+
 ---
 
-## 📚 3. 📚 الفهرس الرئيسي للأوراق البحثية
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">📚 3. الفهرس الرئيسي للأوراق البحثية</h2></summary>
+
+<br />
 
 <table width="100%">
   <thead>
@@ -95,8 +108,15 @@ python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.e
   </tbody>
 </table>
 
+</details>
+
 ---
 
-## 📜 4. 📜 الترخيص وإسناد الأبحاث الأمنية
+<details>
+<summary><h2 style="display:inline-block; margin:0;">📜 4. الترخيص وإسناد الأبحاث الأمنية</h2></summary>
+
+<br />
 
 This project is licensed under the **Maya Thorne Systems &amp; Security Research License (MT-SRL)**. Copyright © 2026 Maya Thorne. All rights reserved. Published strictly for academic analysis, vulnerability research, and systems engineering.
+
+</details>

@@ -25,7 +25,10 @@
 
 ---
 
-## 🏛️ 1. Architecture & Forensic Pipeline
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">🏛️ 1. Architecture et Pipeline Forensique</h2></summary>
+
+<br />
 
 `dotnet-packer-forensics` est un moteur d'ingénierie inverse Python zéro-dépendance conçu pour extraire les overlays PE, inverser les chiffrements XOR doubles et analyser les métadonnées CIL de 8 protecteurs majeurs.
 
@@ -33,9 +36,14 @@
   <a href="https://github.com/maya-thorne/dotnet-packer-forensics"><img src="../assets/locales/fr/architecture_diagram.svg" alt="Architecture Diagram" width="100%" /></a>
 </p>
 
+</details>
+
 ---
 
-## 💻 2. 🛠️ Chaîne d'Outils CLI et Utilisation
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">💻 2. Chaîne d'Outils CLI et Utilisation</h2></summary>
+
+<br />
 
 <p align="center">
   <img src="../assets/demo_terminal.svg" alt="Terminal Demo" width="100%" />
@@ -64,9 +72,14 @@ python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.e
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
 | `--version` | Display engine version and exit | `v1.0.0` |
 
+</details>
+
 ---
 
-## 📚 3. 📚 Livres Blancs de Recherche
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">📚 3. Livres Blancs de Recherche</h2></summary>
+
+<br />
 
 <table width="100%">
   <thead>
@@ -95,8 +108,15 @@ python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.e
   </tbody>
 </table>
 
+</details>
+
 ---
 
-## 📜 4. 📜 Licence et Crédits de Recherche
+<details>
+<summary><h2 style="display:inline-block; margin:0;">📜 4. Licence et Crédits de Recherche</h2></summary>
+
+<br />
 
 This project is licensed under the **Maya Thorne Systems &amp; Security Research License (MT-SRL)**. Copyright © 2026 Maya Thorne. All rights reserved. Published strictly for academic analysis, vulnerability research, and systems engineering.
+
+</details>

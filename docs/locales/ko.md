@@ -25,7 +25,10 @@
 
 ---
 
-## 🏛️ 1. Architecture & Forensic Pipeline
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">🏛️ 1. 시스템 아키텍처 및 포렌식 파이프라인</h2></summary>
+
+<br />
 
 `dotnet-packer-forensics`는 외부 의존성(Zero-Dependency) 없이 순수 파이썬으로 동작하는 역공학 엔진으로, PE 오버레이 카빙, 2단계 이중 XOR 역복호화(xorPacker), 그리고 8대 주요 .NET 보호기(ConfuserEx, .NET Reactor, Eazfuscator, Babel, ArmDot 등)의 CIL 메타데이터 스트림과 섹션 엔트로피를 정밀 분석합니다.
 
@@ -33,9 +36,14 @@
   <a href="https://github.com/maya-thorne/dotnet-packer-forensics"><img src="../assets/locales/ko/architecture_diagram.svg" alt="Architecture Diagram" width="100%" /></a>
 </p>
 
+</details>
+
 ---
 
-## 💻 2. 🛠️ CLI 도구체인 및 실무 사용법
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">💻 2. CLI 도구체인 및 실무 사용법</h2></summary>
+
+<br />
 
 <p align="center">
   <img src="../assets/demo_terminal.svg" alt="Terminal Demo" width="100%" />
@@ -64,9 +72,14 @@ python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.e
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
 | `--version` | Display engine version and exit | `v1.0.0` |
 
+</details>
+
 ---
 
-## 📚 3. 📚 핵심 연구 백서 인덱스
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">📚 3. 핵심 연구 백서 인덱스</h2></summary>
+
+<br />
 
 <table width="100%">
   <thead>
@@ -95,8 +108,15 @@ python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.e
   </tbody>
 </table>
 
+</details>
+
 ---
 
-## 📜 4. 📜 라이선스 및 오픈소스 연구 크레딧
+<details>
+<summary><h2 style="display:inline-block; margin:0;">📜 4. 라이선스 및 오픈소스 연구 크레딧</h2></summary>
+
+<br />
 
 This project is licensed under the **Maya Thorne Systems &amp; Security Research License (MT-SRL)**. Copyright © 2026 Maya Thorne. All rights reserved. Published strictly for academic analysis, vulnerability research, and systems engineering.
+
+</details>

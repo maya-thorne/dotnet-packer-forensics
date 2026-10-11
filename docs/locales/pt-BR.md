@@ -11,7 +11,7 @@
 
 # 🔬 dotnet-packer-forensics
 
-**Desempacotador Estático, Análise de Metadados CLR e Forense de Overlay PE**
+**Desempacotador Estático, Análise de Metadatos CLR e Forense de Overlay PE**
 
 [![Engine](https://img.shields.io/badge/Engine-Python_Zero--Dependency-10b981.svg)](#)
 [![Dual-XOR Carve](https://img.shields.io/badge/Forensics-xorPacker_PE_Overlay-0ea5e9.svg)](#)
@@ -25,7 +25,10 @@
 
 ---
 
-## 🏛️ 1. Architecture & Forensic Pipeline
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">🏛️ 1. Arquitetura e Pipeline Forense</h2></summary>
+
+<br />
 
 `dotnet-packer-forensics` oferece um motor de engenharia reversa em Python sem dependências externas para extrair overlays de PE, inverter cifras XOR duplas (xorPacker) e analisar metadatos CIL em 8 protetores principais.
 
@@ -33,9 +36,14 @@
   <a href="https://github.com/maya-thorne/dotnet-packer-forensics"><img src="../assets/locales/pt-BR/architecture_diagram.svg" alt="Architecture Diagram" width="100%" /></a>
 </p>
 
+</details>
+
 ---
 
-## 💻 2. 🛠️ Ferramentas CLI e Guia de Uso
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">💻 2. Ferramentas CLI e Guia de Uso</h2></summary>
+
+<br />
 
 <p align="center">
   <img src="../assets/demo_terminal.svg" alt="Terminal Demo" width="100%" />
@@ -64,9 +72,14 @@ python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.e
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
 | `--version` | Display engine version and exit | `v1.0.0` |
 
+</details>
+
 ---
 
-## 📚 3. 📚 Relatórios de Pesquisa e Whitepapers
+<details open>
+<summary><h2 style="display:inline-block; margin:0;">📚 3. Relatórios de Pesquisa e Whitepapers</h2></summary>
+
+<br />
 
 <table width="100%">
   <thead>
@@ -95,8 +108,15 @@ python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.e
   </tbody>
 </table>
 
+</details>
+
 ---
 
-## 📜 4. 📜 Licença e Atribuição de Pesquisa
+<details>
+<summary><h2 style="display:inline-block; margin:0;">📜 4. Licença e Atribuição de Pesquisa</h2></summary>
+
+<br />
 
 This project is licensed under the **Maya Thorne Systems &amp; Security Research License (MT-SRL)**. Copyright © 2026 Maya Thorne. All rights reserved. Published strictly for academic analysis, vulnerability research, and systems engineering.
+
+</details>
