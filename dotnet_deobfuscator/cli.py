@@ -23,13 +23,18 @@ def build_parser() -> argparse.ArgumentParser:
         "-o", "--output", help="Write decrypted unpacked payload to specified file or directory"
     )
     parser.add_argument(
-        "-d", "--unpack-dir", help="Directory path to extract all embedded Costura assemblies"
+        "-d", "--unpack-dir", help="Directory path to extract all embedded Costura & ConfuserEx assemblies"
     )
     parser.add_argument(
         "-k",
         "--key",
         default="randomkey",
         help="Master key for overlay decryption (default: 'randomkey')",
+    )
+    parser.add_argument(
+        "--dump-strings",
+        action="store_true",
+        help="Extract and dump decrypted ConfuserEx constants and literal strings",
     )
     parser.add_argument(
         "--format",
@@ -103,6 +108,31 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
     else:
         lines.append("  [-] No Costura embedded assemblies detected.")
 
+    confuser = report.get("confuserex", {})
+    lines.append("")
+    lines.append("--- [ConfuserEx Modular Protector Forensics] ---")
+    if confuser.get("detected"):
+        lines.append(f"  [+] ConfuserEx Protector Detected! (Confidence: {confuser.get('confidence', 'HIGH')})")
+        if confuser.get("detected_protections"):
+            lines.append(f"      Active Protections : {', '.join(confuser['detected_protections'])}")
+        if confuser.get("markers_found"):
+            lines.append(f"      Matched Markers    : {', '.join(confuser['markers_found'])}")
+        if confuser.get("obfuscated_names_count", 0) > 0:
+            lines.append(f"      Unicode Mangled IDs: {confuser['obfuscated_names_count']:,} tokens")
+        lines.append(f"      Decrypted Strings  : {confuser.get('decrypted_strings_count', 0)}")
+        if confuser.get("decrypted_strings"):
+            for s in confuser["decrypted_strings"][:8]:
+                lines.append(f"        * \"{s}\"")
+            if confuser["decrypted_strings_count"] > 8:
+                lines.append(f"        * ... ({confuser['decrypted_strings_count'] - 8} more strings)")
+        lines.append(f"      Embedded Resources : {confuser.get('resources_count', 0)}")
+        for res in confuser.get("resources", []):
+            lines.append(f"      -> {res['output_filename']} ({res['size_bytes']:,} bytes, {res['resource_type']})")
+            lines.append(f"         SHA-256 : {res['sha256']}")
+            lines.append(f"         Entropy : {res['entropy']} / 8.000 (Orig: {res['original_name']})")
+    else:
+        lines.append("  [-] No ConfuserEx protection artifacts detected.")
+
     if verbose and report["sections"]:
         lines.append("")
         lines.append("--- [Section Topology & Entropy] ---")
@@ -138,13 +168,23 @@ def main(argv: Optional[list] = None) -> int:
         sys.stderr.write(f"[-] Error: {e}\n")
         return 1
 
-    # Costura directory extraction
+    # Dump decrypted ConfuserEx strings if requested
+    if args.dump_strings:
+        try:
+            strings = DotNetPackerCore.dump_strings(args.target)
+            sys.stdout.write(f"[+] Decrypted {len(strings)} strings/constants:\n")
+            for idx, s in enumerate(strings):
+                sys.stdout.write(f"  [{idx:04d}] {s}\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] String dump failed: {e}\n")
+
+    # Embedded assemblies directory extraction
     if args.unpack_dir:
         try:
             written = DotNetPackerCore.unpack_to_dir(args.target, args.unpack_dir)
             sys.stdout.write(f"[+] Successfully extracted {len(written)} embedded assemblies to -> {args.unpack_dir}\n")
         except Exception as e:
-            sys.stderr.write(f"[-] Costura extraction failed: {e}\n")
+            sys.stderr.write(f"[-] Extraction failed: {e}\n")
 
     if args.output:
         # Check if output path is an existing directory or ends with slash

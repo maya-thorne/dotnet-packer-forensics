@@ -97,11 +97,12 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | :--- | :--- | :---: |
 | `target` | Path to target executable (`.exe` / `.dll`) | *Required* |
 | `-o, --output` | Output file path or directory for extracted payload | None |
-| `-d, --unpack-dir` | Directory path to extract all embedded Costura assemblies | None |
+| `-d, --unpack-dir` | Directory path to extract all embedded Costura & ConfuserEx assemblies | None |
+| `--dump-strings` | Extract and dump decrypted ConfuserEx constants and literal strings | `False` |
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v1.0.0` |
+| `--version` | Display engine version and exit | `v1.2.0` |
 
 </details>
 
@@ -204,6 +205,11 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><b>Costura Unpacker Engine</b></td>
       <td>Extracts and decompresses embedded assemblies (.compressed) via DeflateStream inversion, path traversal sanitization, and SHA-256 validation.</td>
     </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/unpackers/confuserex.py</code></td>
+      <td><b>ConfuserEx Unpacker Engine</b></td>
+      <td>Decodes string constants (LCG/XorShift PRNG stream ciphers), unpacks encrypted resource containers, and handles CLI resource catalogs.</td>
+    </tr>
   </tbody>
 </table>
 
@@ -268,6 +274,11 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>tests/test_costura_unpacker.py</code></td>
       <td><b>Costura Unpacker Test</b></td>
       <td>Validates DeflateStream decompression, CLI metadata/manifest resource parsing, filename sanitization, and directory extraction.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_confuserex_unpacker.py</code></td>
+      <td><b>ConfuserEx Unpacker Test</b></td>
+      <td>Validates ConfuserEx signature detection, PRNG string decryption, encrypted resource parsing, bounds checks, and CLI string dumping.</td>
     </tr>
   </tbody>
 </table>
