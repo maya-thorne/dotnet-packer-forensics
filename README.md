@@ -102,10 +102,14 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `--rebuild` | Reconstruct damaged PE headers, realign sections, and repair standalone binary | `False` |
 | `--rebuild-out` | Output destination path for rebuilt PE binary | None |
 | `--unmap-dump` | Force process memory dump unmapping (realign RVA mapped sections to disk raw offsets) | `False` |
+| `--verify` | Execute forensic payload verification & PE/CLR structural integrity audit | `False` |
+| `--verify-against` | Reference binary path to perform bitwise byte divergence comparison against | None |
+| `--expected-sha256` | Expected SHA-256 golden hash digest to enforce verification against | None |
+| `--strict-pe` | Enforce strict PE header bounds and treat structural warnings as failures | `False` |
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v1.3.0` |
+| `--version` | Display engine version and exit | `v1.4.0` |
 
 </details>
 
@@ -218,6 +222,11 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><b>PE Header &amp; Section Rebuilder</b></td>
       <td>Reconstructs damaged PE headers, realigns section tables, unmaps process memory dumps, and recovers CLR Cor20Header descriptors.</td>
     </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/payload_verifier.py</code></td>
+      <td><b>Payload Verifier &amp; Test Harness</b></td>
+      <td>Performs bitwise byte-level divergence comparison, cryptographic hashing (SHA-256/SHA-1/MD5), and PE/CLR structural integrity regression auditing.</td>
+    </tr>
   </tbody>
 </table>
 
@@ -292,6 +301,11 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>tests/test_pe_rebuilder.py</code></td>
       <td><b>PE Rebuilder Test</b></td>
       <td>Validates PE anomaly detection, DOS/NT header repairs, section table realignment, memory dump unmapping, Cor20Header recovery, and CLI commands.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_payload_verifier.py</code></td>
+      <td><b>Payload Verifier Test Harness</b></td>
+      <td>Validates bitwise divergence pinpointing, cryptographic hashes (SHA-256/SHA-1/MD5), PE/CLR section structure verification, directory batch auditing, and CLI --verify flags.</td>
     </tr>
   </tbody>
 </table>

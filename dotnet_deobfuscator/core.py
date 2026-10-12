@@ -9,6 +9,10 @@ import time
 from typing import Dict, List, Optional, Tuple
 
 from .dotnet_analyzer import DotNetAnalyzer
+from .payload_verifier import (
+    PayloadVerificationResult,
+    PayloadVerifier,
+)
 from .pe_overlay import PEOverlayParser
 from .pe_rebuilder import PERebuilder, PERebuildOptions, PERebuildReport
 from .signatures import ProtectorSignatures
@@ -76,10 +80,15 @@ class DotNetPackerCore:
         # 6. PE Structural Health & Section Rebuilder Diagnostics
         pe_diag = PERebuilder.detect_anomalies(data)
 
+        # 7. Cryptographic Hashes & Integrity Baselines
+        hashes = PayloadVerifier.compute_hashes(data)
+
         return {
             "file": file_path,
             "size_bytes": file_size,
             "elapsed_ms": elapsed_ms,
+            "sha256": hashes["sha256"],
+            "hashes": hashes,
             "is_pe": assembly_info["is_pe"],
             "is_dotnet": assembly_info["is_dotnet"],
             "entropy": assembly_info["entropy"],
@@ -249,3 +258,49 @@ class DotNetPackerCore:
             strings = res.get("strings", [])
 
         return list(dict.fromkeys(strings))
+
+    @classmethod
+    def verify_payload(
+        cls,
+        target_path: str,
+        reference_path: Optional[str] = None,
+        expected_sha256: Optional[str] = None,
+        strict_pe: bool = False,
+    ) -> PayloadVerificationResult:
+        """Verifies payload cryptographic hashes, bitwise parity, and PE/CLR structure."""
+        return PayloadVerifier.verify_payload_file(
+            target_path=target_path,
+            reference_path=reference_path,
+            expected_sha256=expected_sha256,
+            strict_pe=strict_pe,
+        )
+
+    @classmethod
+    def verify_payload_buffer(
+        cls,
+        data: bytes,
+        reference_data: Optional[bytes] = None,
+        expected_sha256: Optional[str] = None,
+        strict_pe: bool = False,
+    ) -> PayloadVerificationResult:
+        """Verifies byte buffer cryptographic hashes, bitwise parity, and PE/CLR structure."""
+        return PayloadVerifier.verify_payload_buffer(
+            payload_data=data,
+            reference_data=reference_data,
+            expected_sha256=expected_sha256,
+            strict_pe=strict_pe,
+        )
+
+    @classmethod
+    def verify_directory(
+        cls,
+        target_dir: str,
+        golden_hashes: Optional[Dict[str, str]] = None,
+        strict_pe: bool = False,
+    ) -> List[PayloadVerificationResult]:
+        """Audits all binary payloads in a directory against hash baselines and PE constraints."""
+        return PayloadVerifier.verify_directory(
+            target_dir=target_dir,
+            golden_hashes=golden_hashes,
+            strict_pe=strict_pe,
+        )

@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-10-13
+
+### Added
+- **Payload Verification & PE Structural Integrity Regression Test Harness (`dotnet_deobfuscator.payload_verifier`)**:
+  - Full cryptographic hash digest computation engine covering SHA-256, SHA-1, and MD5 algorithms with byte-level bounds checking.
+  - Bitwise differential diagnostics: byte-by-byte comparison against reference payloads, pinpointing the exact byte offset of divergence, length mismatch deltas, and side-by-side hex dump context representations.
+  - Deep PE & CLR container structural conformance verification:
+    - DOS and NT header parsing: DOS magic (`MZ`), `e_lfanew` boundary validation, and NT signature verification.
+    - Architecture and subsystem classification (x86, x64, ARM64, Windows CUI/GUI).
+    - Section table bounds and alignment verification: enforces valid file offset boundaries, monotonically increasing virtual addresses, and calculates Shannon byte entropy per section.
+    - CLR COM Descriptor (Cor20Header) and CLI metadata validation: verifies directory entry 14, `cb=72` length descriptors, metadata stream headers (`BSJB`), and embedded stream names (`#Strings`, `#US`, `#Blob`, `#GUID`, `#~`).
+  - Directory-wide batch auditing engine: scans unpacked payload directories and matches discovered files against golden hash registries.
+- **CLI & Core Orchestrator Integration**:
+  - Added `--verify` flag to run payload and structural PE audits directly from the command line.
+  - Added `--verify-against <ref_path>` for automated bitwise comparison against known reference baselines.
+  - Added `--expected-sha256 <hex>` to enforce strict golden checksum matching.
+  - Added `--strict-pe` to enforce strict PE headers and reject non-PE containers or structural anomalies.
+  - Integrated `hashes` and SHA-256 digest telemetry into `DotNetPackerCore.analyze_file` and CLI reports.
+  - Added `DotNetPackerCore.verify_payload`, `verify_payload_buffer`, and `verify_directory` APIs.
+- **Comprehensive Verification Test Suite (`tests/test_payload_verifier.py`)**:
+  - 16 new test cases covering hash computation, entropy calculations, bitwise parity and divergence pinpointing, synthetic PE header verification, Cor20Header and BSJB metadata parsing, directory batch auditing, and CLI command execution.
+
 ## [1.3.0] - 2026-10-13
 
 ### Added

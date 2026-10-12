@@ -11,6 +11,7 @@ from typing import Optional
 
 from . import __version__
 from .core import DotNetPackerCore
+from .payload_verifier import PayloadVerifier
 from .pe_rebuilder import PERebuildOptions
 
 
@@ -52,6 +53,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="Force process memory dump unmapping (realign RVA mapped sections to disk raw offsets)",
     )
     parser.add_argument(
+        "--verify",
+        action="store_true",
+        help="Execute forensic payload verification & PE/CLR structural integrity audit",
+    )
+    parser.add_argument(
+        "--verify-against",
+        dest="verify_against",
+        help="Reference binary path to perform bitwise byte divergence comparison against",
+    )
+    parser.add_argument(
+        "--expected-sha256",
+        dest="expected_sha256",
+        help="Expected SHA-256 golden hash digest to enforce verification against",
+    )
+    parser.add_argument(
+        "--strict-pe",
+        action="store_true",
+        help="Enforce strict PE header bounds and treat structural warnings as failures",
+    )
+    parser.add_argument(
         "--format",
         choices=["text", "json"],
         default="text",
@@ -73,6 +94,7 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
         "==============================================================================",
         f"Target File     : {report['file']}",
         f"File Size       : {report['size_bytes']:,} bytes",
+        f"SHA-256 Digest  : {report.get('sha256', 'N/A')}",
         f"Analysis Time   : {report['elapsed_ms']} ms",
         f"PE Binary       : {'YES' if report['is_pe'] else 'NO'}",
         f".NET Assembly   : {'YES' if report['is_dotnet'] else 'NO'}",
@@ -195,6 +217,24 @@ def main(argv: Optional[list] = None) -> int:
     except Exception as e:
         sys.stderr.write(f"[-] Error: {e}\n")
         return 1
+
+    # Payload Verification & PE/CLR structural integrity regression checks
+    if args.verify or args.verify_against or args.expected_sha256:
+        try:
+            ver_res = DotNetPackerCore.verify_payload(
+                target_path=args.target,
+                reference_path=args.verify_against,
+                expected_sha256=args.expected_sha256,
+                strict_pe=args.strict_pe,
+            )
+            if args.format == "json":
+                sys.stdout.write(json.dumps(ver_res.to_dict(), indent=2) + "\n")
+            else:
+                sys.stdout.write(PayloadVerifier.format_text_report(ver_res, verbose=args.verbose) + "\n")
+            return 0 if ver_res.passed else 2
+        except Exception as e:
+            sys.stderr.write(f"[-] Verification failed: {e}\n")
+            return 1
 
     # Reconstruct and repair damaged PE binary if requested
     if args.rebuild:
