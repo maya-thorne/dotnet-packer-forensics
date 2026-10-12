@@ -99,10 +99,13 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `-o, --output` | Output file path or directory for extracted payload | None |
 | `-d, --unpack-dir` | Directory path to extract all embedded Costura & ConfuserEx assemblies | None |
 | `--dump-strings` | Extract and dump decrypted ConfuserEx constants and literal strings | `False` |
+| `--rebuild` | Reconstruct damaged PE headers, realign sections, and repair standalone binary | `False` |
+| `--rebuild-out` | Output destination path for rebuilt PE binary | None |
+| `--unmap-dump` | Force process memory dump unmapping (realign RVA mapped sections to disk raw offsets) | `False` |
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v1.2.0` |
+| `--version` | Display engine version and exit | `v1.3.0` |
 
 </details>
 
@@ -210,6 +213,11 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><b>ConfuserEx Unpacker Engine</b></td>
       <td>Decodes string constants (LCG/XorShift PRNG stream ciphers), unpacks encrypted resource containers, and handles CLI resource catalogs.</td>
     </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/pe_rebuilder.py</code></td>
+      <td><b>PE Header &amp; Section Rebuilder</b></td>
+      <td>Reconstructs damaged PE headers, realigns section tables, unmaps process memory dumps, and recovers CLR Cor20Header descriptors.</td>
+    </tr>
   </tbody>
 </table>
 
@@ -279,6 +287,11 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>tests/test_confuserex_unpacker.py</code></td>
       <td><b>ConfuserEx Unpacker Test</b></td>
       <td>Validates ConfuserEx signature detection, PRNG string decryption, encrypted resource parsing, bounds checks, and CLI string dumping.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_pe_rebuilder.py</code></td>
+      <td><b>PE Rebuilder Test</b></td>
+      <td>Validates PE anomaly detection, DOS/NT header repairs, section table realignment, memory dump unmapping, Cor20Header recovery, and CLI commands.</td>
     </tr>
   </tbody>
 </table>

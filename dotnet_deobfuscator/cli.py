@@ -11,6 +11,7 @@ from typing import Optional
 
 from . import __version__
 from .core import DotNetPackerCore
+from .pe_rebuilder import PERebuildOptions
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -35,6 +36,20 @@ def build_parser() -> argparse.ArgumentParser:
         "--dump-strings",
         action="store_true",
         help="Extract and dump decrypted ConfuserEx constants and literal strings",
+    )
+    parser.add_argument(
+        "--rebuild",
+        action="store_true",
+        help="Reconstruct damaged PE headers, realign sections, and repair standalone binary",
+    )
+    parser.add_argument(
+        "--rebuild-out",
+        help="Output destination path for rebuilt PE binary",
+    )
+    parser.add_argument(
+        "--unmap-dump",
+        action="store_true",
+        help="Force process memory dump unmapping (realign RVA mapped sections to disk raw offsets)",
     )
     parser.add_argument(
         "--format",
@@ -133,6 +148,19 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
     else:
         lines.append("  [-] No ConfuserEx protection artifacts detected.")
 
+    pe_reb = report.get("pe_rebuilder", {})
+    lines.append("")
+    lines.append("--- [PE Structural Health & Rebuilder Diagnostics] ---")
+    if pe_reb.get("repair_recommended"):
+        lines.append(f"  [!] Structural Anomalies Detected: {pe_reb.get('anomalies_count', 0)}")
+        if pe_reb.get("is_memory_dump"):
+            lines.append("      Format Classification : Process Memory Dump (Unmapping Required)")
+        for anom in pe_reb.get("anomalies_detected", []):
+            lines.append(f"      - {anom}")
+        lines.append("  [+] Recommended Action    : Run with --rebuild to reconstruct headers & sections")
+    else:
+        lines.append("  [+] PE Structural Status  : HEALTHY (Valid headers and aligned sections)")
+
     if verbose and report["sections"]:
         lines.append("")
         lines.append("--- [Section Topology & Entropy] ---")
@@ -168,6 +196,22 @@ def main(argv: Optional[list] = None) -> int:
         sys.stderr.write(f"[-] Error: {e}\n")
         return 1
 
+    # Reconstruct and repair damaged PE binary if requested
+    if args.rebuild:
+        try:
+            dest_path = args.rebuild_out or args.output or f"{args.target}.rebuilt.exe"
+            options = PERebuildOptions(
+                unmap_memory_dump=args.unmap_dump or report.get("pe_rebuilder", {}).get("is_memory_dump", False)
+            )
+            rebuild_report = DotNetPackerCore.rebuild_pe(args.target, dest_path, options=options)
+            sys.stdout.write(
+                f"[+] Successfully rebuilt PE binary -> {dest_path} ({rebuild_report.rebuilt_size:,} bytes)\n"
+            )
+            for act in rebuild_report.actions_applied:
+                sys.stdout.write(f"    * {act}\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] Rebuild failed: {e}\n")
+
     # Dump decrypted ConfuserEx strings if requested
     if args.dump_strings:
         try:
@@ -186,7 +230,7 @@ def main(argv: Optional[list] = None) -> int:
         except Exception as e:
             sys.stderr.write(f"[-] Extraction failed: {e}\n")
 
-    if args.output:
+    if args.output and not args.rebuild:
         # Check if output path is an existing directory or ends with slash
         if os.path.isdir(args.output) or args.output.endswith(("/", "\\")):
             try:

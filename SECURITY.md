@@ -6,8 +6,8 @@ Security updates are applied to the latest release series on the `main` branch.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| Latest (`0.x`) | :white_check_mark: |
-| `< 0.1.0` | :x:                |
+| `1.x`   | :white_check_mark: |
+| `< 1.0` | :x:                |
 
 ## Cryptographic & Memory Safety Invariants
 

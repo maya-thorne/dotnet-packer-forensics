@@ -10,6 +10,7 @@ from typing import Dict, List, Optional
 
 from .dotnet_analyzer import DotNetAnalyzer
 from .pe_overlay import PEOverlayParser
+from .pe_rebuilder import PERebuilder, PERebuildOptions, PERebuildReport
 from .signatures import ProtectorSignatures
 from .unpackers.confuserex import ConfuserExUnpacker
 from .unpackers.costura import CosturaUnpacker
@@ -72,6 +73,9 @@ class DotNetPackerCore:
                 confuser_strings_list = dec_res.get("strings", [])
             confuser_strings_list = list(dict.fromkeys(confuser_strings_list))
 
+        # 6. PE Structural Health & Section Rebuilder Diagnostics
+        pe_diag = PERebuilder.detect_anomalies(data)
+
         return {
             "file": file_path,
             "size_bytes": file_size,
@@ -83,6 +87,13 @@ class DotNetPackerCore:
             "metadata_streams": assembly_info["metadata_streams"],
             "suspicious_indicators": assembly_info["suspicious_indicators"],
             "detected_protectors": detected_protectors,
+            "pe_rebuilder": {
+                "is_valid_pe": assembly_info["is_pe"],
+                "is_memory_dump": pe_diag["is_memory_dump"],
+                "anomalies_detected": pe_diag["anomalies"],
+                "anomalies_count": len(pe_diag["anomalies"]),
+                "repair_recommended": len(pe_diag["anomalies"]) > 0,
+            },
             "overlay": {
                 "has_overlay": len(overlay_bytes) > 0,
                 "overlay_size_bytes": len(overlay_bytes),
@@ -146,6 +157,30 @@ class DotNetPackerCore:
                 ],
             },
         }
+
+    @classmethod
+    def rebuild_pe(
+        cls,
+        input_path: str,
+        output_path: str,
+        options: Optional[PERebuildOptions] = None,
+    ) -> PERebuildReport:
+        """Rebuilds and repairs damaged PE headers and sections, saving output to file."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        rebuilt_bytes, report = PERebuilder.rebuild(data, options=options)
+        with open(output_path, "wb") as f:
+            f.write(rebuilt_bytes)
+        return report
+
+    @classmethod
+    def rebuild_pe_buffer(
+        cls,
+        data: bytes,
+        options: Optional[PERebuildOptions] = None,
+    ) -> Tuple[bytes, PERebuildReport]:
+        """Rebuilds and repairs damaged PE headers and sections from byte buffer."""
+        return PERebuilder.rebuild(data, options=options)
 
     @classmethod
     def unpack_to_file(
