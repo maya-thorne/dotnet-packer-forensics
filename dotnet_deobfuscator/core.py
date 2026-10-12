@@ -6,7 +6,7 @@ Engineered & Audited by Maya Thorne.
 import os
 import struct
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from .dotnet_analyzer import DotNetAnalyzer
 from .pe_overlay import PEOverlayParser
