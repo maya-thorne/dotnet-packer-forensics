@@ -5,6 +5,7 @@ Engineered & Audited by Maya Thorne.
 
 import argparse
 import json
+import os
 import sys
 from typing import Optional
 
@@ -19,7 +20,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("target", help="Path to target executable (.exe/.dll)")
     parser.add_argument(
-        "-o", "--output", help="Write decrypted unpacked payload to specified path"
+        "-o", "--output", help="Write decrypted unpacked payload to specified file or directory"
+    )
+    parser.add_argument(
+        "-d", "--unpack-dir", help="Directory path to extract all embedded Costura assemblies"
     )
     parser.add_argument(
         "-k",
@@ -74,7 +78,7 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
 
     up = report["unpacked_payload"]
     lines.append("")
-    lines.append("--- [Unpacking Status] ---")
+    lines.append("--- [xorPacker Status] ---")
     if up["success"]:
         details = up["details"]
         lines.append("  [+] xorPacker Payload Successfully Decrypted!")
@@ -84,6 +88,20 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
         lines.append(f"      Valid PE Output   : {'YES' if details['is_valid_pe'] else 'NO'}")
     else:
         lines.append("  [-] No decryptable xorPacker overlay detected.")
+
+    costura = report.get("costura", {})
+    lines.append("")
+    lines.append("--- [Costura Embedded Assemblies Forensics] ---")
+    if costura.get("detected"):
+        lines.append(f"  [+] Costura Packer Detected! (Confidence: {costura.get('confidence', 'HIGH')})")
+        lines.append(f"      Embedded Payloads Count: {costura.get('payloads_count', 0)}")
+        for payload in costura.get("payloads", []):
+            pe_flag = "PE Assembly" if payload["is_pe"] else ("PDB Symbols" if payload["is_pdb"] else "Binary Resource")
+            lines.append(f"      -> {payload['output_filename']} ({payload['size_bytes']:,} bytes, {pe_flag})")
+            lines.append(f"         SHA-256 : {payload['sha256']}")
+            lines.append(f"         Entropy : {payload['entropy']} / 8.000 (Orig: {payload['original_name']})")
+    else:
+        lines.append("  [-] No Costura embedded assemblies detected.")
 
     if verbose and report["sections"]:
         lines.append("")
@@ -120,14 +138,30 @@ def main(argv: Optional[list] = None) -> int:
         sys.stderr.write(f"[-] Error: {e}\n")
         return 1
 
+    # Costura directory extraction
+    if args.unpack_dir:
+        try:
+            written = DotNetPackerCore.unpack_to_dir(args.target, args.unpack_dir)
+            sys.stdout.write(f"[+] Successfully extracted {len(written)} embedded assemblies to -> {args.unpack_dir}\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] Costura extraction failed: {e}\n")
+
     if args.output:
-        success = DotNetPackerCore.unpack_to_file(
-            args.target, args.output, master_key=args.key
-        )
-        if success:
-            sys.stdout.write(f"[+] Successfully extracted unpacked payload -> {args.output}\n")
+        # Check if output path is an existing directory or ends with slash
+        if os.path.isdir(args.output) or args.output.endswith(("/", "\\")):
+            try:
+                written = DotNetPackerCore.unpack_to_dir(args.target, args.output)
+                sys.stdout.write(f"[+] Successfully extracted {len(written)} embedded assemblies to directory -> {args.output}\n")
+            except Exception as e:
+                sys.stderr.write(f"[-] Extraction to directory failed: {e}\n")
         else:
-            sys.stderr.write("[-] Failed to extract unpacked payload.\n")
+            success = DotNetPackerCore.unpack_to_file(
+                args.target, args.output, master_key=args.key
+            )
+            if success:
+                sys.stdout.write(f"[+] Successfully extracted unpacked payload -> {args.output}\n")
+            else:
+                sys.stderr.write("[-] Failed to extract unpacked payload.\n")
 
     if args.format == "json":
         sys.stdout.write(json.dumps(report, indent=2) + "\n")

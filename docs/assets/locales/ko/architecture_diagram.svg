@@ -68,11 +68,11 @@
     <text x="28" y="23" fill="#d8b4fe" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="800">3. CLR 메타데이터 포렌식</text>
     <line x1="0" y1="38" x2="226" y2="38" stroke="#9333ea" stroke-width="1" stroke-opacity="0.4"/>
     
-    <text x="12" y="56" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700">• CLI 스트림 & 엔트로피 검사</text>
+    <text x="12" y="56" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700">• CLI 스트림 &amp; 엔트로피 검사</text>
     <text x="22" y="72" fill="#94a3b8" font-family="ui-monospace, Consolas, monospace" font-size="9.5">#Strings, #US 스트림 스캔</text>
     
     <text x="12" y="102" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700">• 8대 프로텍터 시그니처 매칭</text>
-    <text x="22" y="118" fill="#94a3b8" font-family="ui-monospace, Consolas, monospace" font-size="9.5">Anti-Tamper & JIT 덤프 판별</text>
+    <text x="22" y="118" fill="#94a3b8" font-family="ui-monospace, Consolas, monospace" font-size="9.5">Anti-Tamper &amp; JIT 덤프 판별</text>
   </g>
 
   <!-- Card 4 -->
@@ -81,14 +81,14 @@
     <rect width="226" height="38" rx="10" fill="#431407"/>
     <rect y="26" width="226" height="12" fill="#431407"/>
     <circle cx="16" cy="19" r="4.5" fill="#fdba74" filter="url(#glow)"/>
-    <text x="28" y="23" fill="#fdba74" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="800">4. 복원 산출물 & 방어</text>
+    <text x="28" y="23" fill="#fdba74" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="800">4. 복원 산출물 &amp; 방어</text>
     <line x1="0" y1="38" x2="226" y2="38" stroke="#ea580c" stroke-width="1" stroke-opacity="0.4"/>
     
     <text x="12" y="56" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700">• 비트 단위 독립 PE 바이너리</text>
     <text x="22" y="72" fill="#94a3b8" font-family="ui-monospace, Consolas, monospace" font-size="9.5">복호화된 MZ 페이로드 추출</text>
     
     <text x="12" y="102" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700">• 엔터프라이즈 SIEM 텔레메트리</text>
-    <text x="22" y="118" fill="#94a3b8" font-family="ui-monospace, Consolas, monospace" font-size="9.5">엔트로피 지표 & JSON 추출</text>
+    <text x="22" y="118" fill="#94a3b8" font-family="ui-monospace, Consolas, monospace" font-size="9.5">엔트로피 지표 &amp; JSON 추출</text>
   </g>
 
   <!-- Connecting Arrows -->

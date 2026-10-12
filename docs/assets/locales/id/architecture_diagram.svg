@@ -23,7 +23,7 @@
 
   <!-- Title Header Bar -->
   <text x="500" y="34" fill="#38bdf8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14.5" font-weight="800" text-anchor="middle" filter="url(#glow)">
-    REVERSE ENGINEERING METADATA .NET & FORENSIK OVERLAY PE
+    REVERSE ENGINEERING METADATA .NET &amp; FORENSIK OVERLAY PE
   </text>
 
   <!-- 4 Cards -->
@@ -68,11 +68,11 @@
     <text x="28" y="23" fill="#d8b4fe" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="800">3. Forensik Metadata CLR</text>
     <line x1="0" y1="38" x2="226" y2="38" stroke="#9333ea" stroke-width="1" stroke-opacity="0.4"/>
     
-    <text x="12" y="56" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700">• Aliran CLI & Pemindaian Entropi</text>
+    <text x="12" y="56" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700">• Aliran CLI &amp; Pemindaian Entropi</text>
     <text x="22" y="72" fill="#94a3b8" font-family="ui-monospace, Consolas, monospace" font-size="9.5">Aliran #Strings, #US, #Blob</text>
     
     <text x="12" y="102" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700">• Deteksi 8 Tanda Tangan Protektor</text>
-    <text x="22" y="118" fill="#94a3b8" font-family="ui-monospace, Consolas, monospace" font-size="9.5">Anti-Tamper & Dekripsi JIT</text>
+    <text x="22" y="118" fill="#94a3b8" font-family="ui-monospace, Consolas, monospace" font-size="9.5">Anti-Tamper &amp; Dekripsi JIT</text>
   </g>
 
   <!-- Card 4 -->
@@ -88,7 +88,7 @@
     <text x="22" y="72" fill="#94a3b8" font-family="ui-monospace, Consolas, monospace" font-size="9.5">Ekstraksi Langsung Muatan MZ</text>
     
     <text x="12" y="102" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700">• Telemetri SIEM Produksi</text>
-    <text x="22" y="118" fill="#94a3b8" font-family="ui-monospace, Consolas, monospace" font-size="9.5">Metrik Entropi & Ekspor JSON</text>
+    <text x="22" y="118" fill="#94a3b8" font-family="ui-monospace, Consolas, monospace" font-size="9.5">Metrik Entropi &amp; Ekspor JSON</text>
   </g>
 
   <!-- Connecting Arrows -->

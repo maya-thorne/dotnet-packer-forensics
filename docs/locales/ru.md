@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 <p align="center">
   <a href="./en.md">🇺🇸 English</a> · <a href="./ko.md">🇰🇷 한국어</a> · <a href="./zh-CN.md">🇨🇳 中文</a> · <a href="./es.md">🇪🇸 Español</a> · <a href="./hi.md">🇮🇳 हिन्दी</a><br />
@@ -56,10 +56,10 @@ git clone https://github.com/maya-thorne/dotnet-packer-forensics.git
 cd dotnet-packer-forensics
 
 # Run directly via Python module
-python -m dotnet_deobfuscator samples/xorPacker_sample.exe -v
+python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -v
 
 # Or extract decrypted payload directly to disk
-python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.exe
+python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_payload.exe
 ```
 
 ### CLI Options Matrix
@@ -84,8 +84,8 @@ python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.e
 <table width="100%">
   <thead>
     <tr>
-      <th width="32%">Whitepaper Document</th>
-      <th width="68%">Technical Scope &amp; Forensic Highlights</th>
+      <th width="22%"><nobr>Whitepaper Document</nobr></th>
+      <th width="78%"><nobr>Technical Scope &amp; Forensic Highlights</nobr></th>
     </tr>
   </thead>
   <tbody>
@@ -120,3 +120,4 @@ python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.e
 This project is licensed under the **Maya Thorne Systems &amp; Security Research License (MT-SRL)**. Copyright © 2026 Maya Thorne. All rights reserved. Published strictly for academic analysis, vulnerability research, and systems engineering.
 
 </details>
+

@@ -54,7 +54,7 @@
     </text>
 
     <text x="0" y="88" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="500">
-      Static Unpacker & Metadata Analysis for .NET & Native PE Packers
+      Static Unpacker &amp; Metadata Analysis for .NET &amp; Native PE Packers
     </text>
 
     <!-- 4 Feature Badges -->

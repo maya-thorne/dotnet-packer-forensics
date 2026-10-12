@@ -34,5 +34,9 @@ desktop.ini
 temp_*
 scratch/
 
-# Local agent memory (do not track on GitHub)
+# Local agent & security artifacts (do not track on GitHub)
 memory/
+.gemini/
+
+# Autonomous Dev Logs
+dev_logs/

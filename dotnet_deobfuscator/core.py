@@ -5,11 +5,12 @@ Engineered & Audited by Maya Thorne.
 
 import os
 import time
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from .dotnet_analyzer import DotNetAnalyzer
 from .pe_overlay import PEOverlayParser
 from .signatures import ProtectorSignatures
+from .unpackers.costura import CosturaUnpacker
 
 
 class DotNetPackerCore:
@@ -38,6 +39,10 @@ class DotNetPackerCore:
         pe_size = PEOverlayParser.calculate_pe_size(data)
         overlay_bytes = PEOverlayParser.extract_overlay(data)
         xor_result = PEOverlayParser.decrypt_xor_packer(data, master_key=master_key)
+
+        # 4. Costura Embedded Assembly Inspection
+        costura_detect = CosturaUnpacker.detect(data)
+        costura_payloads = CosturaUnpacker.unpack(data)
 
         return {
             "file": file_path,
@@ -68,6 +73,24 @@ class DotNetPackerCore:
                     else None
                 ),
             },
+            "costura": {
+                "detected": costura_detect["is_costura"],
+                "confidence": costura_detect["confidence"],
+                "payloads_count": len(costura_payloads),
+                "payloads": [
+                    {
+                        "original_name": p["original_name"],
+                        "output_filename": p["output_filename"],
+                        "compressed_size_bytes": p["compressed_size_bytes"],
+                        "size_bytes": p["size_bytes"],
+                        "sha256": p["sha256"],
+                        "is_pe": p["is_pe"],
+                        "is_pdb": p["is_pdb"],
+                        "entropy": p["entropy"],
+                    }
+                    for p in costura_payloads
+                ],
+            },
         }
 
     @classmethod
@@ -79,9 +102,23 @@ class DotNetPackerCore:
             data = f.read()
 
         xor_result = PEOverlayParser.decrypt_xor_packer(data, master_key=master_key)
-        if not xor_result:
-            return False
+        if xor_result:
+            with open(output_path, "wb") as f:
+                f.write(xor_result["decrypted_payload_bytes"])
+            return True
 
-        with open(output_path, "wb") as f:
-            f.write(xor_result["decrypted_payload_bytes"])
-        return True
+        # Check if single Costura payload exists
+        costura_payloads = CosturaUnpacker.unpack(data)
+        if len(costura_payloads) == 1:
+            with open(output_path, "wb") as f:
+                f.write(costura_payloads[0]["payload_bytes"])
+            return True
+
+        return False
+
+    @classmethod
+    def unpack_to_dir(cls, input_path: str, output_dir: str) -> List[Dict[str, any]]:
+        """Extracts all embedded Costura assemblies into target directory."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        return CosturaUnpacker.unpack_to_directory(data, output_dir)

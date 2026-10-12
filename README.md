@@ -13,20 +13,47 @@
 
 **Static Forensic Unpacker, CLR Metadata Analysis & PE Overlay Research Archive**
 
-[![Engine](https://img.shields.io/badge/Engine-Python_Zero--Dependency-10b981.svg)](#)
-[![Dual-XOR Carve](https://img.shields.io/badge/Forensics-xorPacker_PE_Overlay-0ea5e9.svg)](#)
-[![Protector Signatures](https://img.shields.io/badge/Signatures-8_Major_Packers-f59e0b.svg)](#)
+[![Engine](https://img.shields.io/badge/Engine-Python_Zero--Dependency-10b981.svg)](#4-repository-structure--source-code-breakdown)
+[![Dual-XOR Carve](https://img.shields.io/badge/Forensics-xorPacker_PE_Overlay-0ea5e9.svg)](#1-architecture--forensic-pipeline)
+[![Protector Signatures](https://img.shields.io/badge/Signatures-8_Major_Packers-f59e0b.svg)](#3-core-research-whitepapers)
 [![Release](https://img.shields.io/github/v/release/maya-thorne/dotnet-packer-forensics?color=10b981&label=Release&logo=github)](https://github.com/maya-thorne/dotnet-packer-forensics/releases)
 [![License: MT-SRL](https://img.shields.io/badge/License-MT--SRL-blue.svg)](./LICENSE)
 
 <sub>Engineered &amp; Audited by **[Maya Thorne](https://github.com/maya-thorne)** · Low-Level Systems &amp; Reverse Engineering Research</sub>
 
+<br />
+
+<p align="center">
+  <a href="#1-architecture--forensic-pipeline"><b>🏛️ Architecture</b></a> •
+  <a href="#2-cli-toolchain--usage-guide"><b>💻 CLI Toolchain</b></a> •
+  <a href="#3-core-research-whitepapers"><b>📚 Research Whitepapers</b></a> •
+  <a href="#4-repository-structure--source-code-breakdown"><b>📁 Repo Structure</b></a> •
+  <a href="#5-license--security-research-attribution"><b>📜 License &amp; Attribution</b></a>
+</p>
+
 </div>
 
 ---
 
+<span id="table-of-contents"></span>
+## 📑 Table of Contents
+
+- [🏛️ 1. Architecture & Forensic Pipeline](#1-architecture--forensic-pipeline)
+- [💻 2. CLI Toolchain & Usage Guide](#2-cli-toolchain--usage-guide)
+  - [Quickstart Installation](#quickstart-installation)
+  - [CLI Options Matrix](#cli-options-matrix)
+- [📚 3. Core Research Whitepapers](#3-core-research-whitepapers)
+- [📁 4. Repository Structure & Source Code Breakdown](#4-repository-structure--source-code-breakdown)
+  - [📦 Core Deobfuscator Package (`dotnet_deobfuscator/`)](#core-deobfuscator-package)
+  - [🧪 Forensic Sample Corpus (`samples/`)](#forensic-sample-corpus)
+  - [🔬 Test & Validation Suite (`tests/`)](#test-validation-suite)
+- [📜 5. License & Security Research Attribution](#5-license--security-research-attribution)
+
+---
+
+<span id="1-architecture--forensic-pipeline"></span><span id="architecture-pipeline"></span>
 <details open>
-<summary><h2 style="display:inline-block; margin:0;">🏛️ 1. Architecture &amp; Forensic Pipeline</h2></summary>
+<summary><h2 style="display:inline-block; margin:0;" id="1-architecture--forensic-pipeline">🏛️ 1. Architecture &amp; Forensic Pipeline</h2></summary>
 
 <br />
 
@@ -40,8 +67,9 @@
 
 ---
 
+<span id="2-cli-toolchain--usage-guide"></span><span id="cli-toolchain"></span>
 <details open>
-<summary><h2 style="display:inline-block; margin:0;">💻 2. CLI Toolchain &amp; Usage Guide</h2></summary>
+<summary><h2 style="display:inline-block; margin:0;" id="2-cli-toolchain--usage-guide">💻 2. CLI Toolchain &amp; Usage Guide</h2></summary>
 
 <br />
 
@@ -49,6 +77,7 @@
   <img src="./docs/assets/demo_terminal.svg" alt="Terminal Demo" width="100%" />
 </p>
 
+<span id="quickstart-installation"></span>
 ### Quickstart Installation
 ```bash
 # Clone the repository
@@ -56,17 +85,19 @@ git clone https://github.com/maya-thorne/dotnet-packer-forensics.git
 cd dotnet-packer-forensics
 
 # Run directly via Python module
-python -m dotnet_deobfuscator samples/xorPacker_sample.exe -v
+python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -v
 
 # Or extract decrypted payload directly to disk
-python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.exe
+python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_payload.exe
 ```
 
+<span id="cli-options-matrix"></span>
 ### CLI Options Matrix
 | Flag | Description | Default |
 | :--- | :--- | :---: |
 | `target` | Path to target executable (`.exe` / `.dll`) | *Required* |
-| `-o, --output` | Output file path for extracted decrypted payload | None |
+| `-o, --output` | Output file path or directory for extracted payload | None |
+| `-d, --unpack-dir` | Directory path to extract all embedded Costura assemblies | None |
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
@@ -76,16 +107,17 @@ python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.e
 
 ---
 
+<span id="3-core-research-whitepapers"></span><span id="research-whitepapers"></span>
 <details open>
-<summary><h2 style="display:inline-block; margin:0;">📚 3. Core Research Whitepapers</h2></summary>
+<summary><h2 style="display:inline-block; margin:0;" id="3-core-research-whitepapers">📚 3. Core Research Whitepapers</h2></summary>
 
 <br />
 
 <table width="100%">
   <thead>
     <tr>
-      <th width="32%">Whitepaper Document</th>
-      <th width="68%">Technical Scope &amp; Forensic Highlights</th>
+      <th width="22%"><nobr>Whitepaper Document</nobr></th>
+      <th width="78%"><nobr>Technical Scope &amp; Forensic Highlights</nobr></th>
     </tr>
   </thead>
   <tbody>
@@ -112,8 +144,141 @@ python -m dotnet_deobfuscator samples/xorPacker_sample.exe -o unpacked_payload.e
 
 ---
 
+<span id="4-repository-structure--source-code-breakdown"></span><span id="repository-structure"></span>
+<details open>
+<summary><h2 style="display:inline-block; margin:0;" id="4-repository-structure--source-code-breakdown">📁 4. Repository Structure &amp; Source Code Breakdown</h2></summary>
+
+<br />
+
+The project is structured into three modular tiers: the zero-dependency Python forensic engine package (`dotnet_deobfuscator/`), the authentic packed sample corpus (`samples/`), and the comprehensive automated test suite (`tests/`).
+
+<span id="core-deobfuscator-package"></span>
+### 📦 Core Deobfuscator Package (`dotnet_deobfuscator/`)
+
+<table width="100%">
+  <thead>
+    <tr>
+      <th width="26%"><nobr>Module / File</nobr></th>
+      <th width="22%"><nobr>Component Role</nobr></th>
+      <th width="52%"><nobr>1-Line Technical Scope &amp; Forensic Functionality</nobr></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>dotnet_deobfuscator/__init__.py</code></td>
+      <td><b>Package Initializer</b></td>
+      <td>Exports package metadata, semantic version (<code>v1.0.0</code>), and author attribution (<code>Maya Thorne</code>).</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/__main__.py</code></td>
+      <td><b>CLI Entry Point</b></td>
+      <td>Enables direct module execution via <code>python -m dotnet_deobfuscator</code>, delegating to <code>cli.main()</code>.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/cli.py</code></td>
+      <td><b>CLI &amp; Telemetry Engine</b></td>
+      <td>Implements argument parsing (<code>-o</code>, <code>-k</code>, <code>-v</code>, <code>--format</code>), exit codes, and text/JSON telemetry reporting.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/core.py</code></td>
+      <td><b>Forensic Orchestrator</b></td>
+      <td>Coordinates multi-pass static analysis: PE header validation, signature detection, and overlay decryption.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/dotnet_analyzer.py</code></td>
+      <td><b>Metadata &amp; Entropy Parser</b></td>
+      <td>Computes Shannon byte entropy (0.0–8.0), locates CLI metadata streams (<code>#Strings</code>, <code>#US</code>, <code>#Blob</code>, <code>#GUID</code>, <code>#~</code>), and detects .NET runtime.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/pe_overlay.py</code></td>
+      <td><b>PE Overlay &amp; XOR Carver</b></td>
+      <td>Calculates physical PE section boundaries, carves overlay data past EOF, and inverts xorPacker two-stage dynamic XOR ciphers.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/signatures.py</code></td>
+      <td><b>Heuristic Signatures</b></td>
+      <td>Houses heuristic byte and string signatures for 8 major .NET packers (ConfuserEx, .NET Reactor, Eazfuscator, Babel, etc.).</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/unpackers/costura.py</code></td>
+      <td><b>Costura Unpacker Engine</b></td>
+      <td>Extracts and decompresses embedded assemblies (.compressed) via DeflateStream inversion, path traversal sanitization, and SHA-256 validation.</td>
+    </tr>
+  </tbody>
+</table>
+
+<span id="forensic-sample-corpus"></span>
+### 🧪 Forensic Sample Corpus (`samples/`)
+
+<table width="100%">
+  <thead>
+    <tr>
+      <th width="26%"><nobr>Sample File</nobr></th>
+      <th width="22%"><nobr>File Type</nobr></th>
+      <th width="52%"><nobr>1-Line Technical Scope &amp; Forensic Functionality</nobr></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>samples/xorPacker_packed_sample.exe</code></td>
+      <td><b>Packed PE Binary</b></td>
+      <td>Real-world test sample packed with xorPacker containing dynamic XOR encrypted payload in overlay.</td>
+    </tr>
+    <tr>
+      <td><code>samples/xorStub_sample.exe</code></td>
+      <td><b>Dropper Stub Binary</b></td>
+      <td>Native loader stub featuring embedded <code>***</code> sentinel delimiter and static decryption logic.</td>
+    </tr>
+    <tr>
+      <td><code>samples/unpacked_output.bin</code></td>
+      <td><b>Decrypted Ground Truth</b></td>
+      <td>Reference extracted raw payload used for automated regression testing and bit-level verification.</td>
+    </tr>
+  </tbody>
+</table>
+
+<span id="test-validation-suite"></span>
+### 🔬 Test &amp; Validation Suite (`tests/`)
+
+<table width="100%">
+  <thead>
+    <tr>
+      <th width="26%"><nobr>Test Module</nobr></th>
+      <th width="22%"><nobr>Test Domain</nobr></th>
+      <th width="52%"><nobr>1-Line Technical Scope &amp; Forensic Functionality</nobr></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>tests/test_cli.py</code></td>
+      <td><b>CLI Integration Test</b></td>
+      <td>Validates command-line argument parsing, default flags, and text/JSON telemetry report generation.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_dotnet_analyzer.py</code></td>
+      <td><b>Metadata &amp; Signatures Test</b></td>
+      <td>Tests Shannon entropy calculation extremes (0.0 vs &gt;7.9) and heuristic protector signature detection.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_pe_overlay.py</code></td>
+      <td><b>Overlay &amp; Unpacker Test</b></td>
+      <td>Validates XOR cipher mathematical symmetry, mock payload generation, and two-stage key inversion.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_costura_unpacker.py</code></td>
+      <td><b>Costura Unpacker Test</b></td>
+      <td>Validates DeflateStream decompression, CLI metadata/manifest resource parsing, filename sanitization, and directory extraction.</td>
+    </tr>
+  </tbody>
+</table>
+
+</details>
+
+---
+
+<span id="5-license--security-research-attribution"></span><span id="license-attribution"></span>
 <details>
-<summary><h2 style="display:inline-block; margin:0;">📜 4. License &amp; Security Research Attribution</h2></summary>
+<summary><h2 style="display:inline-block; margin:0;" id="5-license--security-research-attribution">📜 5. License &amp; Security Research Attribution</h2></summary>
 
 <br />
 

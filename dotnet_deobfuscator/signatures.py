@@ -64,6 +64,19 @@ class ProtectorSignatures:
             "signatures": [b"IntelliLock", b"TrialAttribute"],
             "description": "Hardware locking envelope protector with expiration enforcement",
         },
+        {
+            "name": "Costura",
+            "type": "Embedded Assembly Packer",
+            "signatures": [
+                b"costura.",
+                b"costura32.",
+                b"costura64.",
+                b"Costura",
+                b"costura.costura.",
+                b".dll.compressed",
+            ],
+            "description": "Fody-based embedded assembly packaging with DeflateStream resource compression",
+        },
     ]
 
     @classmethod
