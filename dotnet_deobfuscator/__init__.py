@@ -86,8 +86,20 @@ from .unpackers.antitamper_models import (
     JITMethodRecord,
 )
 from .unpackers.reactor import DotNetReactorUnpacker
+from .unpackers.antidump import AntiDumpUnpacker
+from .unpackers.antidump_healer import AntiDumpHealer
+from .unpackers.antidump_models import (
+    AntiDumpHealOptions,
+    AntiDumpHealResult,
+    AntiDumpTechnique,
+    AntiDumpTelemetry,
+    DumpSource,
+    HealedSectionInfo,
+    SectionType,
+    SynthesizedImportInfo,
+)
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -158,6 +170,17 @@ __all__ = [
     "JITMethodRecord",
     "AntiTamperDetectionResult",
     "AntiTamperSectionInfo",
+    "AntiDumpUnpacker",
+    "AntiDumpHealer",
+    "AntiDumpHealOptions",
+    "AntiDumpHealResult",
+    "AntiDumpTechnique",
+    "AntiDumpTelemetry",
+    "DumpSource",
+    "HealedSectionInfo",
+    "SectionType",
+    "SynthesizedImportInfo",
     "__version__",
 ]
+
 

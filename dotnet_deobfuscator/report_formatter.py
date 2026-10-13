@@ -222,7 +222,27 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
     else:
         lines.append("  [-] No CLI metadata anti-tamper artifacts detected.")
 
+    adump = report.get("anti_dump", {})
+    lines.append("")
+    lines.append("--- [Anti-Dump Forensics & Memory Healer (Scylla-Compatible)] ---")
+    if adump.get("detected"):
+        lines.append(f"  [+] Anti-Dump Memory Corruption Detected! (Confidence: {adump.get('confidence', 'HIGH')})")
+        lines.append(f"      Dump Source Class  : {adump.get('dump_source', 'UNKNOWN')}")
+        if adump.get("detected_techniques"):
+            lines.append(f"      Active Techniques  : {', '.join(adump['detected_techniques'])}")
+        lines.append(f"      BSJB CLR Metadata  : {'YES' if adump.get('bsjb_found') else 'NO'}")
+        if adump.get("bsjb_rva"):
+            lines.append(f"      BSJB Header RVA    : {adump['bsjb_rva']}")
+        lines.append(f"      Cor20 COM Descriptor: {'RECOVERED' if adump.get('cor20_recovered') else 'STRIPPED/ABSENT'}")
+        if adump.get("anomalies"):
+            for anom in adump["anomalies"][:4]:
+                lines.append(f"        * {anom}")
+        lines.append("  [+] Recommended Action    : Run with --heal-dump to reconstruct PE headers & normalize sections")
+    else:
+        lines.append("  [-] No anti-dump memory corruptions detected.")
+
     pe_reb = report.get("pe_rebuilder", {})
+
     lines.append("")
     lines.append("--- [PE Structural Health & Rebuilder Diagnostics] ---")
     if pe_reb.get("repair_recommended"):

@@ -18,8 +18,10 @@ This document tracks shipped capabilities and future engineering milestones for 
 - [x] **IntelliLock Hardware Lock Defeat & License Envelope Neutralizer** — De-enveloping of encapsulated assemblies, LCG/XOR stream decryption, deterministic hardware fingerprint profiling and bypassing, synthetic perpetual master license (.lic) generation, Cor20Header EntryPoint restoration, and directory extraction with 22 dedicated unit tests.
 - [x] **DeepSea Control Flow De-flattening & AST Reconstructor** — ECMA-335 CIL opcode disassembler, opaque predicate pruning, state-machine loop de-flattening, symbolic block flow resolution, multi-pass branch offset calculation, high-level AST and C# pseudocode recovery, .deepsea PE section synthesis, and automated directory extraction with 17 dedicated unit tests.
 - [x] **CLI Metadata Anti-Tamper Heuristics & In-Memory JIT Dumper Engine** — ECMA-335 CorILMethod Tiny/Fat header parser and serializer, PRNG/LCG stream cipher decryption with cryptographic buffer zeroizing, JIT dumper ingestion interface supporting in-memory scans, structured JSON descriptors, and binary JITD streams, static anti-tamper detection across corrupted `#~`/`#-` tables, PE `.antitamper` section injection, and safe directory extraction with 26 dedicated unit tests.
+- [x] **Anti-Dump Process Memory PE Header Healer & Scylla Dump Normalizer** — Heuristic detection and classification of anti-dump corruptions, Scylla process memory dump unmapping (aligning virtual addresses to file offsets), BSJB CLR metadata scanning, ECMA-335 Cor20Header recovery and synthesis, standard mscoree.dll CLR import table (IAT) reconstruction, section table name sanitization and synthesis, and safe directory extraction with 16 dedicated unit tests.
 
 ---
+
 
 ## Planned Milestones
 
