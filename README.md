@@ -125,6 +125,10 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `--deepsea-out` | Destination path for de-flattened assembly binary | None |
 | `--export-ast` | Export high-level Abstract Syntax Tree (AST) in JSON format | `False` |
 | `--export-cfg` | Export de-flattened Control Flow Graph (CFG) in Graphviz DOT format | `False` |
+| `--anti-tamper` | Detect anti-tamper protections, decrypt CIL method bodies, and restore assembly | `False` |
+| `--anti-tamper-out` | Destination path for anti-tamper restored assembly binary | None |
+| `--dump-jit` | Path to in-memory JIT dump file (JSON or binary JITD stream) | None |
+| `--anti-tamper-dir` | Directory path to extract restored assembly and CIL method payload binaries | None |
 | `--rebuild` | Reconstruct damaged PE headers, realign sections, and repair standalone binary | `False` |
 | `--rebuild-out` | Output destination path for rebuilt PE binary | None |
 | `--unmap-dump` | Force process memory dump unmapping (realign RVA mapped sections to disk raw offsets) | `False` |
@@ -135,7 +139,7 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v2.0.0` |
+| `--version` | Display engine version and exit | `v2.1.0` |
 
 </details>
 
@@ -314,6 +318,26 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td>Scans DeepSea signatures, de-flattens CIL method bodies, injects .deepsea PE sections, and manages safe directory artifact exports.</td>
     </tr>
     <tr>
+      <td><code>dotnet_deobfuscator/unpackers/antitamper_models.py</code></td>
+      <td><b>Anti-Tamper Models &amp; Headers</b></td>
+      <td>Models ECMA-335 CorILMethod Tiny/Fat headers, JIT method records, and anti-tamper detection indicators.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/unpackers/antitamper_jit.py</code></td>
+      <td><b>JIT Dumper &amp; Decryptor Engine</b></td>
+      <td>Parses and serializes CIL method headers, executes LCG/XOR stream ciphers, and ingests in-memory/JSON/binary JIT dumps.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/unpackers/antitamper.py</code></td>
+      <td><b>Anti-Tamper Unpacker &amp; Restorer</b></td>
+      <td>Detects corrupted metadata streams (#~/#-), restores method bodies, synthesizes .antitamper sections, and manages safe directory exports.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/report_formatter.py</code></td>
+      <td><b>Forensic Telemetry Formatter</b></td>
+      <td>Formats human-readable multi-protector diagnostic text reports with strict separation of concerns and modular limits.</td>
+    </tr>
+    <tr>
       <td><code>dotnet_deobfuscator/pe_rebuilder.py</code></td>
       <td><b>PE Header &amp; Section Rebuilder</b></td>
       <td>Reconstructs damaged PE headers, realigns section tables, unmaps process memory dumps, and recovers CLR Cor20Header descriptors.</td>
@@ -432,6 +456,11 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>tests/test_deepsea_unpacker.py</code></td>
       <td><b>DeepSea De-flattener &amp; AST Test</b></td>
       <td>Validates CIL instruction disassembly, opaque predicate pruning, state machine loop de-flattening, multi-pass branch offset calculation, AST reconstruction, and CLI flags.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_antitamper_unpacker.py</code></td>
+      <td><b>Anti-Tamper &amp; JIT Dumper Test</b></td>
+      <td>Validates CorILMethod Tiny/Fat serialization, PRNG stream decryption, JIT dumper ingestion (JSON/binary stream), anti-tamper heuristics, PE section synthesis, and CLI flags.</td>
     </tr>
   </tbody>
 </table>

@@ -26,6 +26,8 @@ from .unpackers.confuserex import ConfuserExUnpacker
 from .unpackers.costura import CosturaUnpacker
 from .unpackers.eazfuscator import EazfuscatorUnpacker
 from .unpackers.eazfuscator_vm import EazfuscatorVMDisassembler, VMOpcodeTable
+from .unpackers.antitamper import AntiTamperUnpacker
+from .unpackers.antitamper_jit import JITDumperInterface
 from .unpackers.deepsea import DeepSeaUnpacker
 from .unpackers.intellilock import IntelliLockUnpacker
 from .unpackers.intellilock_models import HardwareProfile, VirtualLicense
@@ -70,24 +72,7 @@ class DotNetPackerCore:
         # Extract decrypted strings across CLI resources and raw streams
         confuser_strings_list: List[str] = []
         if confuser_detect["is_confuserex"]:
-            res_info = ConfuserExUnpacker.parse_cli_resources_directory(data)
-            if res_info is not None:
-                res_offset, res_size = res_info
-                curr = 0
-                while curr + 4 <= res_size:
-                    length = struct.unpack_from("<I", data, res_offset + curr)[0]
-                    curr += 4
-                    if length == 0 or curr + length > res_size:
-                        break
-                    chunk = data[res_offset + curr : res_offset + curr + length]
-                    curr += length
-                    dec_res = ConfuserExUnpacker.decrypt_constants(chunk, mode="auto")
-                    if dec_res["success"] and len(dec_res["strings"]) > 0:
-                        confuser_strings_list.extend(dec_res["strings"])
-            if not confuser_strings_list:
-                dec_res = ConfuserExUnpacker.decrypt_constants(data, mode="auto")
-                confuser_strings_list = dec_res.get("strings", [])
-            confuser_strings_list = list(dict.fromkeys(confuser_strings_list))
+            confuser_strings_list = DotNetPackerCore._extract_confuser_strings(data)
 
         # 6. .NET Reactor & NecroBit / Native Stub Envelope Forensics
         reactor_detect = DotNetReactorUnpacker.detect(data)
@@ -112,10 +97,13 @@ class DotNetPackerCore:
         # 11. DeepSea Obfuscator Control Flow Flattening Forensics
         deepsea_detect = DeepSeaUnpacker.detect(data)
 
-        # 12. PE Structural Health & Section Rebuilder Diagnostics
+        # 12. CLI Metadata Anti-Tamper & JIT Dumper Forensics
+        antitamper_detect = AntiTamperUnpacker.detect(data)
+
+        # 13. PE Structural Health & Section Rebuilder Diagnostics
         pe_diag = PERebuilder.detect_anomalies(data)
 
-        # 13. Cryptographic Hashes & Integrity Baselines
+        # 14. Cryptographic Hashes & Integrity Baselines
         hashes = PayloadVerifier.compute_hashes(data)
 
         return {
@@ -208,22 +196,12 @@ class DotNetPackerCore:
                 "markers_found": reactor_detect["markers_found"],
                 "methods_count": len(reactor_methods),
                 "restored_methods": [
-                    {
-                        "token": m["token"],
-                        "header_format": m["header_format"],
-                        "code_size": m["code_size"],
-                        "is_valid_cil": m["is_valid_cil"],
-                    }
+                    {"token": m["token"], "header_format": m["header_format"], "code_size": m["code_size"], "is_valid_cil": m["is_valid_cil"]}
                     for m in reactor_methods.values()
                 ][:50],
                 "payloads_count": len(reactor_payloads),
                 "payloads": [
-                    {
-                        "output_filename": p["output_filename"],
-                        "size_bytes": p["size_bytes"],
-                        "sha256": p["sha256"],
-                        "artifact_type": p["artifact_type"],
-                    }
+                    {"output_filename": p["output_filename"], "size_bytes": p["size_bytes"], "sha256": p["sha256"], "artifact_type": p["artifact_type"]}
                     for p in reactor_payloads
                 ],
             },
@@ -235,13 +213,7 @@ class DotNetPackerCore:
                 "vm_containers_count": eaz_detect["vm_containers_count"],
                 "matched_markers": eaz_detect["matched_markers"],
                 "containers": [
-                    {
-                        "offset": f"0x{c['offset']:X}",
-                        "magic": c["magic"],
-                        "version": c["version"],
-                        "method_count": c["method_count"],
-                        "tokens": [m["token_hex"] for m in c.get("methods", [])],
-                    }
+                    {"offset": f"0x{c['offset']:X}", "magic": c["magic"], "version": c["version"], "method_count": c["method_count"], "tokens": [m["token_hex"] for m in c.get("methods", [])]}
                     for c in eaz_containers
                 ],
             },
@@ -254,15 +226,7 @@ class DotNetPackerCore:
                 "obfuscated_symbols_count": babel_detect["obfuscated_symbols_count"],
                 "markers_found": babel_detect["markers_found"],
                 "merged_assemblies": [
-                    {
-                        "original_name": m["original_name"],
-                        "output_filename": m["output_filename"],
-                        "size_bytes": m["size_bytes"],
-                        "sha256": m["sha256"],
-                        "is_pe": m["is_pe"],
-                        "compression": m["compression"],
-                        "entropy": m["entropy"],
-                    }
+                    {"original_name": m["original_name"], "output_filename": m["output_filename"], "size_bytes": m["size_bytes"], "sha256": m["sha256"], "is_pe": m["is_pe"], "compression": m["compression"], "entropy": m["entropy"]}
                     for m in babel_merged
                 ],
             },
@@ -274,13 +238,7 @@ class DotNetPackerCore:
                 "vm_containers_count": armdot_detect["vm_containers_count"],
                 "matched_markers": armdot_detect["matched_markers"],
                 "containers": [
-                    {
-                        "offset": f"0x{c['offset']:X}",
-                        "magic": c["magic"],
-                        "version": c["version"],
-                        "method_count": c["method_count"],
-                        "tokens": [m["token_hex"] for m in c.get("methods", [])],
-                    }
+                    {"offset": f"0x{c['offset']:X}", "magic": c["magic"], "version": c["version"], "method_count": c["method_count"], "tokens": [m["token_hex"] for m in c.get("methods", [])]}
                     for c in armdot_containers
                 ],
             },
@@ -299,6 +257,15 @@ class DotNetPackerCore:
                 "matched_markers": deepsea_detect["matched_markers"],
                 "switch_density": deepsea_detect["switch_density"],
                 "state_var_density": deepsea_detect["state_var_density"],
+            },
+            "anti_tamper": {
+                "detected": antitamper_detect["is_tampered"],
+                "confidence": antitamper_detect["confidence"],
+                "detected_types": antitamper_detect["detected_types"],
+                "encrypted_methods_count": antitamper_detect["encrypted_methods_count"],
+                "corrupted_streams": antitamper_detect["corrupted_streams"],
+                "jit_signatures": antitamper_detect["jit_signatures"],
+                "anti_tamper_sections": antitamper_detect["anti_tamper_sections"],
             },
         }
 
@@ -410,6 +377,8 @@ class DotNetPackerCore:
         written.extend(ArmDotUnpacker.unpack_to_directory(data, output_dir))
         if DeepSeaUnpacker.detect(data)["is_deepsea"]:
             DeepSeaUnpacker.unpack_to_directory(data, output_dir)
+        if AntiTamperUnpacker.detect(data)["is_tampered"]:
+            AntiTamperUnpacker.unpack_to_directory(data, output_dir)
         return written
 
     @classmethod
@@ -540,11 +509,8 @@ class DotNetPackerCore:
         return ArmDotUnpacker.extract_vm_containers(data)
 
     @classmethod
-    def dump_strings(cls, input_path: str) -> List[str]:
-        """Extracts and decrypts all embedded ConfuserEx constants and literal strings."""
-        with open(input_path, "rb") as f:
-            data = f.read()
-
+    def _extract_confuser_strings(cls, data: bytes) -> List[str]:
+        """Helper to extract and decrypt embedded ConfuserEx string constants."""
         strings: List[str] = []
         res_info = ConfuserExUnpacker.parse_cli_resources_directory(data)
         if res_info is not None:
@@ -560,12 +526,17 @@ class DotNetPackerCore:
                 res = ConfuserExUnpacker.decrypt_constants(chunk, mode="auto")
                 if res["success"] and len(res["strings"]) > 0:
                     strings.extend(res["strings"])
-
         if not strings:
             res = ConfuserExUnpacker.decrypt_constants(data, mode="auto")
             strings = res.get("strings", [])
-
         return list(dict.fromkeys(strings))
+
+    @classmethod
+    def dump_strings(cls, input_path: str) -> List[str]:
+        """Extracts and decrypts all embedded ConfuserEx constants and literal strings."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        return cls._extract_confuser_strings(data)
 
     @classmethod
     def verify_payload(
@@ -679,11 +650,47 @@ class DotNetPackerCore:
         return DeepSeaUnpacker.deflatten_method(bytecode, method_name=method_name)
 
     @classmethod
-    def unpack_deepsea_dir(
-        cls, input_path: str, output_dir: str
-    ) -> Dict[str, Any]:
+    def unpack_deepsea_dir(cls, input_path: str, output_dir: str) -> Dict[str, Any]:
         """Unpacks de-flattened binary, AST JSON, and CFG diagrams to directory."""
         with open(input_path, "rb") as f:
+            return DeepSeaUnpacker.unpack_to_directory(f.read(), output_dir=output_dir)
+
+    @classmethod
+    def restore_antitamper(
+        cls,
+        input_path: str,
+        output_path: Optional[str] = None,
+        jit_dump_path: Optional[str] = None,
+        master_seed: int = 0x5A5A5A5A,
+    ) -> Tuple[bytes, Dict[str, Any]]:
+        """Restores anti-tampered assembly, repairing CIL method bodies."""
+        with open(input_path, "rb") as f:
             data = f.read()
-        return DeepSeaUnpacker.unpack_to_directory(data, output_dir=output_dir)
+        jit_records = None
+        if jit_dump_path and os.path.exists(jit_dump_path):
+            with open(jit_dump_path, "r", encoding="utf-8") as f:
+                jit_records = JITDumperInterface.ingest_json_dump(f.read())
+        restored = AntiTamperUnpacker.decrypt_and_restore_methods(
+            data, jit_records=jit_records, master_seed=master_seed
+        )
+        rebuilt_pe, rep = AntiTamperUnpacker.restore_assembly(data, restored)
+        if output_path:
+            with open(output_path, "wb") as f:
+                f.write(rebuilt_pe)
+        return rebuilt_pe, rep
+
+    @classmethod
+    def unpack_antitamper_dir(
+        cls,
+        input_path: str,
+        output_dir: str,
+        jit_dump_path: Optional[str] = None,
+        master_seed: int = 0x5A5A5A5A,
+    ) -> Dict[str, Any]:
+        """Unpacks anti-tampered binary, dumped methods, and CIL files to directory."""
+        with open(input_path, "rb") as f:
+            return AntiTamperUnpacker.unpack_to_directory(
+                f.read(), output_dir=output_dir, jit_dump_file=jit_dump_path, master_seed=master_seed
+            )
+
 

@@ -71,9 +71,23 @@ from .unpackers.intellilock_models import (
     SecurityError,
     VirtualLicense,
 )
+from .unpackers.antitamper import AntiTamperUnpacker
+from .unpackers.antitamper_jit import (
+    AntiTamperDecrypter,
+    CorILMethodParser,
+    JITDumperInterface,
+)
+from .unpackers.antitamper_models import (
+    AntiTamperDetectionResult,
+    AntiTamperSectionInfo,
+    AntiTamperType,
+    CorILMethodFormat,
+    CorILMethodHeader,
+    JITMethodRecord,
+)
 from .unpackers.reactor import DotNetReactorUnpacker
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -134,5 +148,16 @@ __all__ = [
     "ASTStatement",
     "ASTIf",
     "ASTWhile",
+    "AntiTamperUnpacker",
+    "AntiTamperDecrypter",
+    "CorILMethodParser",
+    "JITDumperInterface",
+    "AntiTamperType",
+    "CorILMethodFormat",
+    "CorILMethodHeader",
+    "JITMethodRecord",
+    "AntiTamperDetectionResult",
+    "AntiTamperSectionInfo",
     "__version__",
 ]
+

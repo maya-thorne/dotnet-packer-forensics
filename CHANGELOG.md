@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-10-13
+
+### Added
+- **CLI Metadata Anti-Tamper Heuristics & In-Memory JIT Dumper Engine (`dotnet_deobfuscator.unpackers.antitamper_models`, `dotnet_deobfuscator.unpackers.antitamper_jit`, `dotnet_deobfuscator.unpackers.antitamper`)**:
+  - ECMA-335 CorILMethod header parser and serializer (`CorILMethodParser`) supporting Tiny format (`CorILMethod_TinyFormat`, 1-byte header, max code size 63, implicit maxstack 8) and Fat format (`CorILMethod_FatFormat`, 12-byte header, arbitrary code size, explicit maxstack, local variable signatures, exception handling flags).
+  - CIL method bytecode validator verifying valid terminating opcodes (`ret`, `throw`, `rethrow`, `jmp`) and instruction stream consistency.
+  - Cryptographic stream decrypter (`AntiTamperDecrypter`) inverting dynamic LCG PRNG stream ciphers, token-keyed XOR ciphers, and rolling byte XOR transformations with intermediate buffer zeroizing (`ctypes.memset`).
+  - In-memory CLR JIT dumper interface (`JITDumperInterface`) supporting raw memory dump scans, structured JSON method dumps, and binary JITD (`JITD\x01`) stream deserialization with 100 MB bounds checking.
+  - Static heuristic detection engine (`AntiTamperUnpacker.detect`) identifying corrupted `#~` and `#-` metadata tables, JIT hook assembly sequences, ConfuserEx anti-tamper runtime attributes, and high-entropy `.tamper` PE sections.
+  - Assembly reconstruction pipeline (`restore_antitamper_assembly`) synthesizing clean PE binaries with decrypted CIL method bodies injected into an aligned `.antitamper` section, incrementing section headers, and realigning `SizeOfImage`.
+  - Safe directory export pipeline (`unpack_to_directory`) generating restored executables, individual method CIL blobs, JSON telemetry manifests, and dump diagnostics with strict path traversal defenses.
+- **Forensic Telemetry Formatter (`dotnet_deobfuscator.report_formatter`)**:
+  - Extracted human-readable terminal report generation (`format_text_report`) into a dedicated module, maintaining strict 500-700 line limits across `cli.py` and core orchestrators.
+- **CLI & Core Orchestrator Integration**:
+  - Added `--anti-tamper` and `--anti-tamper-out` flags to detect anti-tamper protections, decrypt CIL method bodies, and write restored binaries.
+  - Added `--dump-jit` to ingest in-memory CLR JIT dumps from external debuggers or memory carvers.
+  - Added `--anti-tamper-dir` for multi-method CIL artifact and diagnostics exports.
+  - Integrated anti-tamper telemetry into `DotNetPackerCore.analyze_file`, `restore_antitamper`, and `unpack_antitamper_dir`.
+- **Comprehensive Anti-Tamper Test Suite (`tests/test_antitamper_unpacker.py`)**:
+  - 26 unit and integration test cases covering CorILMethod header parsing/serialization, CIL instruction validation, PRNG stream decryption, zeroize buffer wiping, JIT dump JSON/stream ingestion, heuristic detection, PE section injection, directory path traversal defense, and CLI execution (expanding the total test suite to 213 tests).
+
 ## [2.0.0] - 2026-10-13
 
 ### Added
