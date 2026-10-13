@@ -61,7 +61,13 @@ class ProtectorSignatures:
         {
             "name": "IntelliLock",
             "type": "License Management Envelope",
-            "signatures": [b"IntelliLock", b"TrialAttribute"],
+            "signatures": [
+                b"IntelliLock",
+                b"TrialAttribute",
+                b"IntelliLock.Licensing",
+                b"EvaluationMode",
+                b"LockType",
+            ],
             "description": "Hardware locking envelope protector with expiration enforcement",
         },
         {

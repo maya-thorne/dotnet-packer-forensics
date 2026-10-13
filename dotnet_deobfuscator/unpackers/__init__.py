@@ -3,6 +3,14 @@ Unpacker Engines for .NET Protectors & Assembly Bundlers.
 Engineered & Audited by Maya Thorne.
 """
 
+from .armdot import (
+    ArmDotDevirtualizer,
+    ArmDotInstruction,
+    ArmDotOpcode,
+    ArmDotOpcodeTable,
+    ArmDotUnpacker,
+    ArmDotVMDisassembler,
+)
 from .babel import BabelUnpacker
 from .babel_demangler import (
     AssemblyNode,
@@ -21,6 +29,15 @@ from .eazfuscator_vm import (
     VMInstruction,
     VMOpcode,
     VMOpcodeTable,
+)
+from .intellilock import IntelliLockUnpacker
+from .intellilock_models import (
+    HardwareProfile,
+    IntelliLockMetadata,
+    LicenseStatus,
+    LockType,
+    SecurityError,
+    VirtualLicense,
 )
 from .reactor import DotNetReactorUnpacker
 
@@ -41,4 +58,17 @@ __all__ = [
     "DemangledSymbol",
     "AssemblyNode",
     "DependencyGraph",
+    "ArmDotUnpacker",
+    "ArmDotOpcode",
+    "ArmDotOpcodeTable",
+    "ArmDotInstruction",
+    "ArmDotVMDisassembler",
+    "ArmDotDevirtualizer",
+    "IntelliLockUnpacker",
+    "IntelliLockMetadata",
+    "HardwareProfile",
+    "VirtualLicense",
+    "LockType",
+    "LicenseStatus",
+    "SecurityError",
 ]

@@ -26,6 +26,8 @@ from .unpackers.confuserex import ConfuserExUnpacker
 from .unpackers.costura import CosturaUnpacker
 from .unpackers.eazfuscator import EazfuscatorUnpacker
 from .unpackers.eazfuscator_vm import EazfuscatorVMDisassembler, VMOpcodeTable
+from .unpackers.intellilock import IntelliLockUnpacker
+from .unpackers.intellilock_models import HardwareProfile, VirtualLicense
 from .unpackers.reactor import DotNetReactorUnpacker
 
 
@@ -103,10 +105,13 @@ class DotNetPackerCore:
         armdot_detect = ArmDotUnpacker.detect(data)
         armdot_containers = ArmDotUnpacker.extract_vm_containers(data)
 
-        # 10. PE Structural Health & Section Rebuilder Diagnostics
+        # 10. IntelliLock License Management Envelope & Hardware Locking Forensics
+        intellilock_detect = IntelliLockUnpacker.detect(data)
+
+        # 11. PE Structural Health & Section Rebuilder Diagnostics
         pe_diag = PERebuilder.detect_anomalies(data)
 
-        # 9. Cryptographic Hashes & Integrity Baselines
+        # 12. Cryptographic Hashes & Integrity Baselines
         hashes = PayloadVerifier.compute_hashes(data)
 
         return {
@@ -274,6 +279,15 @@ class DotNetPackerCore:
                     }
                     for c in armdot_containers
                 ],
+            },
+            "intellilock": {
+                "detected": intellilock_detect["is_intellilock"],
+                "confidence": intellilock_detect["confidence"],
+                "is_enveloped": intellilock_detect["is_enveloped"],
+                "has_hardware_lock": intellilock_detect["has_hardware_lock"],
+                "has_trial_expiration": intellilock_detect["has_trial_expiration"],
+                "markers_found": intellilock_detect["markers_found"],
+                "sections_matched": intellilock_detect["sections_matched"],
             },
         }
 
@@ -577,3 +591,47 @@ class DotNetPackerCore:
             golden_hashes=golden_hashes,
             strict_pe=strict_pe,
         )
+
+    @classmethod
+    def strip_intellilock(
+        cls,
+        input_path: str,
+        output_path: str,
+        master_seed: int = 0x14725836,
+    ) -> Dict[str, Any]:
+        """Neutralizes IntelliLock license envelope, restoring clean assembly."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        unlocked_bin, meta, lic = IntelliLockUnpacker.neutralize_license_envelope(
+            data, master_seed=master_seed
+        )
+        with open(output_path, "wb") as f:
+            f.write(unlocked_bin)
+        return {
+            "unlocked_file": output_path,
+            "size_bytes": len(unlocked_bin),
+            "metadata": meta.to_dict(),
+            "license": lic.to_dict(),
+        }
+
+    @classmethod
+    def bypass_intellilock_hwlock(
+        cls, hardware_id: str = "*"
+    ) -> VirtualLicense:
+        """Synthesizes matching VirtualLicense to bypass hardware locking."""
+        return VirtualLicense.generate_unlimited_license(hardware_id=hardware_id)
+
+    @classmethod
+    def unpack_intellilock_dir(
+        cls,
+        input_path: str,
+        output_dir: str,
+        master_seed: int = 0x14725836,
+    ) -> Dict[str, Any]:
+        """Unpacks neutralized binary, synthetic license, and manifest to directory."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        return IntelliLockUnpacker.unpack_to_directory(
+            data, output_dir=output_dir, master_seed=master_seed
+        )
+
