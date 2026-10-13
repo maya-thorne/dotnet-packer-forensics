@@ -42,9 +42,18 @@ from .unpackers.eazfuscator_vm import (
     VMOpcode,
     VMOpcodeTable,
 )
+from .unpackers.intellilock import IntelliLockUnpacker
+from .unpackers.intellilock_models import (
+    HardwareProfile,
+    IntelliLockMetadata,
+    LicenseStatus,
+    LockType,
+    SecurityError,
+    VirtualLicense,
+)
 from .unpackers.reactor import DotNetReactorUnpacker
 
-__version__ = "1.8.0"
+__version__ = "1.9.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -82,5 +91,12 @@ __all__ = [
     "ArmDotInstruction",
     "ArmDotVMDisassembler",
     "ArmDotDevirtualizer",
+    "IntelliLockUnpacker",
+    "IntelliLockMetadata",
+    "HardwareProfile",
+    "VirtualLicense",
+    "LockType",
+    "LicenseStatus",
+    "SecurityError",
     "__version__",
 ]

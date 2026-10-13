@@ -116,6 +116,11 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `--babel-out` | Destination path for demangled assembly binary | None |
 | `--export-depgraph` | Export inter-assembly dependency graph in JSON, Graphviz DOT, and Mermaid formats | `False` |
 | `--custom-map` | Path to external Babel mapping file (XML, JSON, or text format) | None |
+| `--strip-intellilock` | Strip IntelliLock licensing envelope and restore original managed assembly | `False` |
+| `--intellilock-out` | Destination path for unlocked assembly binary | None |
+| `--bypass-hwlock` | Generate synthetic hardware license to bypass hardware locking and trial expiration | `False` |
+| `--gen-license` | Generate a valid synthetic perpetual master license (.lic) file | `False` |
+| `--license-out` | Destination file path for generated synthetic license (.lic) | None |
 | `--rebuild` | Reconstruct damaged PE headers, realign sections, and repair standalone binary | `False` |
 | `--rebuild-out` | Output destination path for rebuilt PE binary | None |
 | `--unmap-dump` | Force process memory dump unmapping (realign RVA mapped sections to disk raw offsets) | `False` |
@@ -126,7 +131,7 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v1.8.0` |
+| `--version` | Display engine version and exit | `v1.9.0` |
 
 </details>
 
@@ -278,6 +283,16 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>dotnet_deobfuscator/unpackers/armdot.py</code></td>
       <td><b>ArmDot Unpacker Engine</b></td>
       <td>Scans ArmDot markers, carves embedded VM containers, decrypts LCG/XOR bytecodes, synthesizes .armdot PE sections, and extracts assemblies.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/unpackers/intellilock_models.py</code></td>
+      <td><b>IntelliLock Models &amp; Licensing</b></td>
+      <td>Models licensing state, bitmask restrictions, deterministic hardware fingerprint profiles, and binary .lic container generators.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/unpackers/intellilock.py</code></td>
+      <td><b>IntelliLock Unpacker Engine</b></td>
+      <td>Carves enveloped assemblies, inverts LCG/XOR ciphers, defeats hardware locking, restores Cor20Header EntryPoints, and manages safe directory exports.</td>
     </tr>
     <tr>
       <td><code>dotnet_deobfuscator/pe_rebuilder.py</code></td>

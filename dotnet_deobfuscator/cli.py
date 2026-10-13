@@ -133,6 +133,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to external Babel mapping file (XML, JSON, or text format)",
     )
     parser.add_argument(
+        "--strip-intellilock",
+        action="store_true",
+        help="Strip IntelliLock licensing envelope and restore original managed assembly",
+    )
+    parser.add_argument(
+        "--intellilock-out",
+        help="Destination path for unlocked assembly binary",
+    )
+    parser.add_argument(
+        "--bypass-hwlock",
+        action="store_true",
+        help="Generate synthetic hardware license to bypass hardware locking and trial expiration",
+    )
+    parser.add_argument(
+        "--gen-license",
+        action="store_true",
+        help="Generate a valid synthetic perpetual master license (.lic) file",
+    )
+    parser.add_argument(
+        "--license-out",
+        help="Destination file path for generated synthetic license (.lic)",
+    )
+    parser.add_argument(
         "--verify",
         action="store_true",
         help="Execute forensic payload verification & PE/CLR structural integrity audit",
@@ -332,6 +355,24 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
                     lines.append(f"          - Method Token: {t}")
     else:
         lines.append("  [-] No ArmDot virtualization artifacts detected.")
+
+    itllock = report.get("intellilock", {})
+    lines.append("")
+    lines.append("--- [IntelliLock License Management Forensics] ---")
+    if itllock.get("detected"):
+        lines.append(f"  [+] IntelliLock Detected! (Confidence: {itllock.get('confidence', 'HIGH')})")
+        if itllock.get("is_enveloped"):
+            lines.append("      Licensing Envelope : Encapsulated Assembly Identified")
+        if itllock.get("has_hardware_lock"):
+            lines.append("      Hardware Lock      : YES (Bound to Host Machine Fingerprint)")
+        if itllock.get("has_trial_expiration"):
+            lines.append("      Trial Expiration   : YES (Execution count / Calendar deadline enforced)")
+        if itllock.get("markers_found"):
+            lines.append(f"      Matched Markers    : {', '.join(itllock['markers_found'])}")
+        if itllock.get("sections_matched"):
+            lines.append(f"      Matched Sections   : {', '.join(itllock['sections_matched'])}")
+    else:
+        lines.append("  [-] No IntelliLock protection artifacts detected.")
 
     pe_reb = report.get("pe_rebuilder", {})
     lines.append("")
@@ -540,6 +581,34 @@ def main(argv: Optional[list] = None) -> int:
                 sys.stdout.write(f"    * {act}\n")
         except Exception as e:
             sys.stderr.write(f"[-] ArmDot de-virtualization failed: {e}\n")
+
+    # Strip IntelliLock license envelope if requested
+    if args.strip_intellilock:
+        try:
+            dest_path = args.intellilock_out or args.output or f"{args.target}.unlocked.exe"
+            res = DotNetPackerCore.strip_intellilock(args.target, output_path=dest_path)
+            sys.stdout.write(
+                f"[+] Successfully neutralized IntelliLock license envelope -> {dest_path} ({res['size_bytes']:,} bytes)\n"
+            )
+            sys.stdout.write("    * De-enveloped clean PE with restored EntryPoint\n")
+            sys.stdout.write("    * Hardware lock and trial expiration checks bypassed\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] IntelliLock stripping failed: {e}\n")
+
+    # Generate synthetic master license or bypass hardware lock if requested
+    if args.gen_license or args.bypass_hwlock:
+        try:
+            lic = DotNetPackerCore.bypass_intellilock_hwlock()
+            dest_path = args.license_out or "master_license.lic"
+            with open(dest_path, "wb") as f:
+                f.write(lic.to_bytes())
+            sys.stdout.write(
+                f"[+] Generated synthetic perpetual master license -> {dest_path}\n"
+            )
+            sys.stdout.write(f"    * Licensee: {lic.licensee} ({lic.company})\n")
+            sys.stdout.write(f"    * Status: {lic.status.value}, Expiration: {lic.expiration_date}\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] Synthetic license generation failed: {e}\n")
 
     # Dump decrypted ConfuserEx strings if requested
     if args.dump_strings:

@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-10-13
+
+### Added
+- **IntelliLock Hardware Lock Defeat & License Envelope Neutralizer (`dotnet_deobfuscator.unpackers.intellilock_models` & `dotnet_deobfuscator.unpackers.intellilock`)**:
+  - Full static signature detection and confidence heuristic scoring for IntelliLock and Eziriz licensing envelope artifacts (`IntelliLock`, `Eziriz`, `IntelliLock.Licensing`, `TrialAttribute`, `EvaluationMode`, `LicenseStatus`, `LockType`, `.itllock`, `.ilock`, `ILOCK\x01`).
+  - Container carving engine extracting encapsulated assemblies from PE sections (`.itllock`, `.ilock`, `.lic`), resources, and overlays with safety ceilings (100 MB payload cap, 256 MB decompression bomb defense).
+  - Multi-scheme stream decryption engine inverting dynamic LCG/PRNG rolling XOR ciphers and multi-byte XOR keys with intermediate keystream buffer zeroization.
+  - Deterministic hardware fingerprint profiling (`HardwareProfile`) calculating canonical 16-character hardware identifier hashes (`XXXX-XXXX-XXXX-XXXX`) across CPU ID, HDD serial, MAC address, and motherboard UUID.
+  - Synthetic perpetual master license generator (`VirtualLicense`) constructing tamper-resistant binary `.lic` containers with HMAC signatures, unbounded trial days, and full enterprise feature masks.
+  - Envelope de-enveloping and in-place neutralization pipelines restoring original managed entry point RVAs and Cor20Header EntryPointTokens, stripping license verification stubs, and realigning PE sections.
+  - Safe directory extraction (`unpack_to_directory`) generating de-enveloped executables, synthetic master licenses, hardware profile bypass descriptors, and manifest metadata with strict path traversal defenses.
+- **CLI & Core Orchestrator Integration**:
+  - Added `--strip-intellilock` and `--intellilock-out` flags to de-envelope protected assemblies and write unlocked binaries.
+  - Added `--bypass-hwlock` and `--gen-license` (with `--license-out`) to synthesize perpetual master licenses bypassing machine binding.
+  - Integrated IntelliLock telemetry into `DotNetPackerCore.analyze_file` and CLI text/JSON reporting.
+  - Added `DotNetPackerCore.strip_intellilock`, `DotNetPackerCore.bypass_intellilock_hwlock`, and `DotNetPackerCore.unpack_intellilock_dir` high-level programmatic APIs.
+- **Comprehensive IntelliLock Test Suite (`tests/test_intellilock_unpacker.py`)**:
+  - 23 unit and integration test cases covering static detection, hardware ID hashing, virtual license HMAC serialization and tamper detection, LCG/XOR decryption, container carving, PE header restoration, directory safety, decompression bomb defense, and CLI execution (expanding the total test suite to 170 tests).
+
 ## [1.8.0] - 2026-10-13
 
 ### Added
