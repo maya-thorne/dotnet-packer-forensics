@@ -333,7 +333,7 @@ class VMInstruction:
             target_str = f"IL_{self.operand:04X}" if isinstance(self.operand, int) else str(self.operand)
             return f"{addr_str} {hex_bytes:12s} {self.mnemonic} {target_str}"
 
-        if self.opcode in (VMOpcode.CALL, VMOpcode.CALLVIRT, VMOpcode.NEWOBJ, VMOpcode.LD_STR):
+        if self.opcode in (VMOpcode.CALL, VMOpcode.CALLVIRT, VMOpcode.NEWOBJ, VMOpcode.LD_STR, VMOpcode.NEWARR):
             if isinstance(self.operand, int):
                 return f"{addr_str} {hex_bytes:12s} {self.mnemonic} 0x{self.operand:08X}"
 
@@ -502,6 +502,11 @@ class EazfuscatorDevirtualizer:
 
             elif op == VMOpcode.LD_I4:
                 val = int(arg) if arg is not None else 0
+                if val > 0x7FFFFFFF:
+                    val = (val & 0xFFFFFFFF) - 0x100000000
+                elif val < -0x80000000:
+                    val = -0x80000000
+
                 if val == -1:
                     cil_builder.append(0x15)  # ldc.i4.m1
                     disasm_lines.append(f"IL_{cil_pc:04X}: ldc.i4.m1")
@@ -519,6 +524,10 @@ class EazfuscatorDevirtualizer:
 
             elif op == VMOpcode.LD_I8:
                 val = int(arg) if arg is not None else 0
+                if val > 0x7FFFFFFFFFFFFFFF:
+                    val = (val & 0xFFFFFFFFFFFFFFFF) - 0x10000000000000000
+                elif val < -0x8000000000000000:
+                    val = -0x8000000000000000
                 cil_builder.append(0x21)  # ldc.i8
                 cil_builder.extend(struct.pack("<q", val))
                 disasm_lines.append(f"IL_{cil_pc:04X}: ldc.i8 {val}")
@@ -536,13 +545,13 @@ class EazfuscatorDevirtualizer:
                 disasm_lines.append(f"IL_{cil_pc:04X}: ldc.r8 {val}")
 
             elif op == VMOpcode.LD_STR:
-                token = int(arg) if arg is not None else 0x70000001
+                token = (int(arg) & 0xFFFFFFFF) if arg is not None else 0x70000001
                 cil_builder.append(0x72)  # ldstr
                 cil_builder.extend(struct.pack("<I", token))
                 disasm_lines.append(f"IL_{cil_pc:04X}: ldstr 0x{token:08X}")
 
             elif op == VMOpcode.LD_LOC:
-                idx = int(arg) if arg is not None else 0
+                idx = max(0, min(65535, int(arg) if arg is not None else 0))
                 if 0 <= idx <= 3:
                     cil_builder.append(0x06 + idx)  # ldloc.0 .. ldloc.3
                     disasm_lines.append(f"IL_{cil_pc:04X}: ldloc.{idx}")
@@ -555,7 +564,7 @@ class EazfuscatorDevirtualizer:
                     disasm_lines.append(f"IL_{cil_pc:04X}: ldloc {idx}")
 
             elif op == VMOpcode.ST_LOC:
-                idx = int(arg) if arg is not None else 0
+                idx = max(0, min(65535, int(arg) if arg is not None else 0))
                 if 0 <= idx <= 3:
                     cil_builder.append(0x0A + idx)  # stloc.0 .. stloc.3
                     disasm_lines.append(f"IL_{cil_pc:04X}: stloc.{idx}")
@@ -567,8 +576,18 @@ class EazfuscatorDevirtualizer:
                     cil_builder.extend(struct.pack("<H", idx))
                     disasm_lines.append(f"IL_{cil_pc:04X}: stloc {idx}")
 
+            elif op == VMOpcode.LD_LOCA:
+                idx = max(0, min(65535, int(arg) if arg is not None else 0))
+                if idx < 256:
+                    cil_builder.extend([0x12, idx])  # ldloca.s
+                    disasm_lines.append(f"IL_{cil_pc:04X}: ldloca.s {idx}")
+                else:
+                    cil_builder.extend([0xFE, 0x0D])  # ldloca
+                    cil_builder.extend(struct.pack("<H", idx))
+                    disasm_lines.append(f"IL_{cil_pc:04X}: ldloca {idx}")
+
             elif op == VMOpcode.LD_ARG:
-                idx = int(arg) if arg is not None else 0
+                idx = max(0, min(65535, int(arg) if arg is not None else 0))
                 if 0 <= idx <= 3:
                     cil_builder.append(0x02 + idx)  # ldarg.0 .. ldarg.3
                     disasm_lines.append(f"IL_{cil_pc:04X}: ldarg.{idx}")
@@ -581,7 +600,7 @@ class EazfuscatorDevirtualizer:
                     disasm_lines.append(f"IL_{cil_pc:04X}: ldarg {idx}")
 
             elif op == VMOpcode.ST_ARG:
-                idx = int(arg) if arg is not None else 0
+                idx = max(0, min(65535, int(arg) if arg is not None else 0))
                 if idx < 256:
                     cil_builder.extend([0x10, idx])  # starg.s
                     disasm_lines.append(f"IL_{cil_pc:04X}: starg.s {idx}")
@@ -589,6 +608,16 @@ class EazfuscatorDevirtualizer:
                     cil_builder.extend([0xFE, 0x0B])  # starg
                     cil_builder.extend(struct.pack("<H", idx))
                     disasm_lines.append(f"IL_{cil_pc:04X}: starg {idx}")
+
+            elif op == VMOpcode.LD_ARGA:
+                idx = max(0, min(65535, int(arg) if arg is not None else 0))
+                if idx < 256:
+                    cil_builder.extend([0x0F, idx])  # ldarga.s
+                    disasm_lines.append(f"IL_{cil_pc:04X}: ldarga.s {idx}")
+                else:
+                    cil_builder.extend([0xFE, 0x0A])  # ldarga
+                    cil_builder.extend(struct.pack("<H", idx))
+                    disasm_lines.append(f"IL_{cil_pc:04X}: ldarga {idx}")
 
             elif op == VMOpcode.ADD:
                 cil_builder.append(0x58)
@@ -669,22 +698,32 @@ class EazfuscatorDevirtualizer:
                 disasm_lines.append(f"IL_{cil_pc:04X}: {b_name} [rel]")
 
             elif op == VMOpcode.CALL:
-                token = int(arg) if arg is not None else 0x06000001
+                token = (int(arg) & 0xFFFFFFFF) if arg is not None else 0x06000001
                 cil_builder.append(0x28)  # call
                 cil_builder.extend(struct.pack("<I", token))
                 disasm_lines.append(f"IL_{cil_pc:04X}: call 0x{token:08X}")
 
             elif op == VMOpcode.CALLVIRT:
-                token = int(arg) if arg is not None else 0x06000001
+                token = (int(arg) & 0xFFFFFFFF) if arg is not None else 0x06000001
                 cil_builder.append(0x6F)  # callvirt
                 cil_builder.extend(struct.pack("<I", token))
                 disasm_lines.append(f"IL_{cil_pc:04X}: callvirt 0x{token:08X}")
 
             elif op == VMOpcode.NEWOBJ:
-                token = int(arg) if arg is not None else 0x06000001
+                token = (int(arg) & 0xFFFFFFFF) if arg is not None else 0x06000001
                 cil_builder.append(0x73)  # newobj
                 cil_builder.extend(struct.pack("<I", token))
                 disasm_lines.append(f"IL_{cil_pc:04X}: newobj 0x{token:08X}")
+
+            elif op == VMOpcode.NEWARR:
+                token = (int(arg) & 0xFFFFFFFF) if arg is not None else 0x01000001
+                cil_builder.append(0x8D)  # newarr
+                cil_builder.extend(struct.pack("<I", token))
+                disasm_lines.append(f"IL_{cil_pc:04X}: newarr 0x{token:08X}")
+
+            elif op == VMOpcode.LDLEN:
+                cil_builder.append(0x8E)  # ldlen
+                disasm_lines.append(f"IL_{cil_pc:04X}: ldlen")
 
             elif op == VMOpcode.CONV_I4:
                 cil_builder.append(0x69)

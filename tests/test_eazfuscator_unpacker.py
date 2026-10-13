@@ -389,6 +389,202 @@ class TestEazfuscatorUnpacker(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertTrue(os.path.exists(out_dest))
 
+    # =========================================================================
+    # 7. Comprehensive Extended Opcode & Edge Case Tests
+    # =========================================================================
+
+    def test_eazfuscator_unpacker_disassemble_and_devirtualize_apis(self):
+        """Tests high-level EazfuscatorUnpacker class methods for disassembly and method devirtualization."""
+        # 1. disassemble_bytecode
+        bc = bytes([0x10, 0x14, 0x00, 0x00, 0x00, 0x7F])  # LD_I4 20, RET
+        instructions = EazfuscatorUnpacker.disassemble_bytecode(bc)
+        self.assertEqual(len(instructions), 2)
+        self.assertEqual(instructions[0].opcode, VMOpcode.LD_I4)
+        self.assertEqual(instructions[0].operand, 20)
+        self.assertEqual(instructions[1].opcode, VMOpcode.RET)
+
+        # 2. devirtualize_method
+        res = EazfuscatorUnpacker.devirtualize_method(bc, max_stack=8, method_token=0x06000050)
+        self.assertTrue(res["success"])
+        self.assertEqual(res["method_token"], 0x06000050)
+        self.assertIn("ldc.i4.s 20", res["decompiled_cil_asm"])
+        self.assertIn("ret", res["decompiled_cil_asm"])
+
+        # 3. disassemble_assembly
+        container = self._create_vm_container([(0x06000050, 8, bc)])
+        pe = self._create_synthetic_pe(extra_payload=b"Eazfuscator.NET\0" + container)
+        disasm_list = EazfuscatorUnpacker.disassemble_assembly(pe)
+        self.assertEqual(len(disasm_list), 1)
+        self.assertEqual(disasm_list[0]["token"], 0x06000050)
+        self.assertEqual(disasm_list[0]["token_hex"], "0x06000050")
+        self.assertEqual(disasm_list[0]["instruction_count"], 2)
+
+    def test_devirtualize_advanced_opcodes_loca_arga_arrays(self):
+        """Tests LD_LOCA, LD_ARGA, NEWARR, and LDLEN translation to authentic CIL."""
+        instructions = [
+            VMInstruction(offset=0, raw_bytes=b"\x22\x02\x00", opcode=VMOpcode.LD_LOCA, operand=2),
+            VMInstruction(offset=3, raw_bytes=b"\x22\x00\x02", opcode=VMOpcode.LD_LOCA, operand=512),
+            VMInstruction(offset=6, raw_bytes=b"\x27\x01\x00", opcode=VMOpcode.LD_ARGA, operand=1),
+            VMInstruction(offset=9, raw_bytes=b"\x27\x00\x02", opcode=VMOpcode.LD_ARGA, operand=512),
+            VMInstruction(offset=12, raw_bytes=b"\x63\x05\x00\x00\x01", opcode=VMOpcode.NEWARR, operand=0x01000005),
+            VMInstruction(offset=17, raw_bytes=b"\x64", opcode=VMOpcode.LDLEN),
+            VMInstruction(offset=18, raw_bytes=b"\x7F", opcode=VMOpcode.RET),
+        ]
+        res = EazfuscatorDevirtualizer.devirtualize(instructions)
+        self.assertTrue(res["success"])
+        asm = res["decompiled_cil_asm"]
+        self.assertIn("ldloca.s 2", asm)
+        self.assertIn("ldloca 512", asm)
+        self.assertIn("ldarga.s 1", asm)
+        self.assertIn("ldarga 512", asm)
+        self.assertIn("newarr 0x01000005", asm)
+        self.assertIn("ldlen", asm)
+
+        # Check format() for NEWARR includes hex token
+        self.assertIn("0x01000005", instructions[4].format())
+
+    def test_devirtualize_comparisons_and_conversions(self):
+        """Tests CEQ, CGT, CLT comparisons and CONV_* numeric type conversions."""
+        instructions = [
+            VMInstruction(offset=0, raw_bytes=b"\x40", opcode=VMOpcode.CEQ),
+            VMInstruction(offset=1, raw_bytes=b"\x41", opcode=VMOpcode.CGT),
+            VMInstruction(offset=2, raw_bytes=b"\x42", opcode=VMOpcode.CLT),
+            VMInstruction(offset=3, raw_bytes=b"\x70", opcode=VMOpcode.CONV_I4),
+            VMInstruction(offset=4, raw_bytes=b"\x71", opcode=VMOpcode.CONV_I8),
+            VMInstruction(offset=5, raw_bytes=b"\x72", opcode=VMOpcode.CONV_R4),
+            VMInstruction(offset=6, raw_bytes=b"\x73", opcode=VMOpcode.CONV_R8),
+            VMInstruction(offset=7, raw_bytes=b"\x74", opcode=VMOpcode.CONV_U4),
+            VMInstruction(offset=8, raw_bytes=b"\x75", opcode=VMOpcode.CONV_U8),
+            VMInstruction(offset=9, raw_bytes=b"\x7F", opcode=VMOpcode.RET),
+        ]
+        res = EazfuscatorDevirtualizer.devirtualize(instructions)
+        self.assertTrue(res["success"])
+        asm = res["decompiled_cil_asm"]
+        for mnemonic in ["ceq", "cgt", "clt", "conv.i4", "conv.i8", "conv.r4", "conv.r8", "conv.u4", "conv.u8"]:
+            self.assertIn(mnemonic, asm)
+
+    def test_devirtualize_arithmetic_and_bitwise_full(self):
+        """Tests all arithmetic and bitwise opcodes: SUB, MUL, DIV, REM, NEG, AND, OR, XOR, NOT, SHL, SHR."""
+        instructions = [
+            VMInstruction(offset=0, raw_bytes=b"\x31", opcode=VMOpcode.SUB),
+            VMInstruction(offset=1, raw_bytes=b"\x32", opcode=VMOpcode.MUL),
+            VMInstruction(offset=2, raw_bytes=b"\x33", opcode=VMOpcode.DIV),
+            VMInstruction(offset=3, raw_bytes=b"\x34", opcode=VMOpcode.REM),
+            VMInstruction(offset=4, raw_bytes=b"\x35", opcode=VMOpcode.NEG),
+            VMInstruction(offset=5, raw_bytes=b"\x36", opcode=VMOpcode.AND),
+            VMInstruction(offset=6, raw_bytes=b"\x37", opcode=VMOpcode.OR),
+            VMInstruction(offset=7, raw_bytes=b"\x38", opcode=VMOpcode.XOR),
+            VMInstruction(offset=8, raw_bytes=b"\x39", opcode=VMOpcode.NOT),
+            VMInstruction(offset=9, raw_bytes=b"\x3A", opcode=VMOpcode.SHL),
+            VMInstruction(offset=10, raw_bytes=b"\x3B", opcode=VMOpcode.SHR),
+            VMInstruction(offset=11, raw_bytes=b"\x7E", opcode=VMOpcode.THROW),
+        ]
+        res = EazfuscatorDevirtualizer.devirtualize(instructions)
+        self.assertTrue(res["success"])
+        asm = res["decompiled_cil_asm"]
+        for op in ["sub", "mul", "div", "rem", "neg", "and", "or", "xor", "not", "shl", "shr", "throw"]:
+            self.assertIn(op, asm)
+
+    def test_devirtualize_all_branch_conditions(self):
+        """Tests BR_TRUE, BR_FALSE, BEQ, BNE, BGT, BGE, BLT, BLE relative target calculation."""
+        branch_ops = [
+            VMOpcode.BR_TRUE,
+            VMOpcode.BR_FALSE,
+            VMOpcode.BEQ,
+            VMOpcode.BNE,
+            VMOpcode.BGT,
+            VMOpcode.BGE,
+            VMOpcode.BLT,
+            VMOpcode.BLE,
+        ]
+        instructions = []
+        for i, op in enumerate(branch_ops):
+            instructions.append(VMInstruction(offset=i * 5, raw_bytes=b"\x50\x00\x00\x00\x00", opcode=op, operand=100))
+        instructions.append(VMInstruction(offset=100, raw_bytes=b"\x7F", opcode=VMOpcode.RET))
+
+        res = EazfuscatorDevirtualizer.devirtualize(instructions)
+        self.assertTrue(res["success"])
+        self.assertEqual(res["instruction_count"], len(branch_ops) + 1)
+        asm = res["decompiled_cil_asm"]
+        for b_name in ["brtrue", "brfalse", "beq", "bne.un", "bgt", "bge", "blt", "ble"]:
+            self.assertIn(b_name, asm)
+
+    def test_devirtualize_stack_and_constants_edge_cases(self):
+        """Tests POP, DUP, LD_NULL, LD_I8, LD_R4, LD_R8, and LD_I4 numeric boundaries."""
+        instructions = [
+            VMInstruction(offset=0, raw_bytes=b"\x01", opcode=VMOpcode.POP),
+            VMInstruction(offset=1, raw_bytes=b"\x02", opcode=VMOpcode.DUP),
+            VMInstruction(offset=2, raw_bytes=b"\x03", opcode=VMOpcode.LD_NULL),
+            VMInstruction(offset=3, raw_bytes=b"\x10\xFF\xFF\xFF\xFF", opcode=VMOpcode.LD_I4, operand=-1),
+            VMInstruction(offset=8, raw_bytes=b"\x10\xCE\xFF\xFF\xFF", opcode=VMOpcode.LD_I4, operand=-50),
+            VMInstruction(offset=13, raw_bytes=b"\x10\x64\x00\x00\x00", opcode=VMOpcode.LD_I4, operand=100),
+            VMInstruction(offset=18, raw_bytes=b"\x10\xA0\x86\x01\x00", opcode=VMOpcode.LD_I4, operand=100000),
+            VMInstruction(offset=23, raw_bytes=b"\x11\x00\x00\x00\x00\x00\x00\x00\x01", opcode=VMOpcode.LD_I8, operand=0x0100000000),
+            VMInstruction(offset=32, raw_bytes=b"\x12\x00\x00\x48\x41", opcode=VMOpcode.LD_R4, operand=12.5),
+            VMInstruction(offset=37, raw_bytes=b"\x13\x00\x00\x00\x00\x00\x00\x45\x40", opcode=VMOpcode.LD_R8, operand=42.0),
+            VMInstruction(offset=46, raw_bytes=b"\x7F", opcode=VMOpcode.RET),
+        ]
+        res = EazfuscatorDevirtualizer.devirtualize(instructions)
+        self.assertTrue(res["success"])
+        asm = res["decompiled_cil_asm"]
+        self.assertIn("pop", asm)
+        self.assertIn("dup", asm)
+        self.assertIn("ldnull", asm)
+        self.assertIn("ldc.i4.m1", asm)
+        self.assertIn("ldc.i4.s -50", asm)
+        self.assertIn("ldc.i4.s 100", asm)
+        self.assertIn("ldc.i4 100000", asm)
+        self.assertIn("ldc.i8", asm)
+        self.assertIn("ldc.r4", asm)
+        self.assertIn("ldc.r8", asm)
+
+    def test_unpack_to_directory_clean_binary_returns_empty(self):
+        """Verifies unpack_to_directory returns [] when binary has no Eazfuscator containers."""
+        clean_pe = self._create_synthetic_pe(extra_payload=b"No obfuscation here")
+        out_dir = os.path.join(self.temp_dir, "clean_unpack_test")
+        written = EazfuscatorUnpacker.unpack_to_directory(clean_pe, out_dir)
+        self.assertEqual(written, [])
+        self.assertFalse(os.path.exists(os.path.join(out_dir, "restored_eazvm.exe")))
+
+    def test_devirtualize_assembly_no_containers(self):
+        """Verifies devirtualize_assembly returns unmodified data and failure report if no containers exist."""
+        clean_pe = self._create_synthetic_pe()
+        rebuilt, rep = EazfuscatorUnpacker.devirtualize_assembly(clean_pe)
+        self.assertEqual(rebuilt, clean_pe)
+        self.assertFalse(rep["success"])
+        self.assertEqual(rep["methods_devirtualized_count"], 0)
+
+    def test_extract_vm_containers_corrupted_or_truncated(self):
+        """Verifies extract_vm_containers safely rejects truncated or corrupt container headers."""
+        # Less than 16 bytes
+        self.assertEqual(EazfuscatorUnpacker.extract_vm_containers(b"EAZVM"), [])
+
+        # Method count = 0
+        container_zero = bytearray(b"EAZVM\x01")
+        container_zero.extend(struct.pack("<HI", 1, 0))
+        self.assertEqual(EazfuscatorUnpacker.extract_vm_containers(bytes(container_zero)), [])
+
+        # Method count > 5000 (unrealistic / corrupt)
+        container_overflow = bytearray(b"EAZVM\x01")
+        container_overflow.extend(struct.pack("<HI", 1, 99999))
+        self.assertEqual(EazfuscatorUnpacker.extract_vm_containers(bytes(container_overflow)), [])
+
+        # Bytecode length exceeds buffer
+        container_trunc = bytearray(b"EAZVM\x01")
+        container_trunc.extend(struct.pack("<HI", 1, 1))
+        container_trunc.extend(struct.pack("<IHI", 0x06000001, 8, 10000))  # claims 10000 bytes, but ends
+        self.assertEqual(EazfuscatorUnpacker.extract_vm_containers(bytes(container_trunc)), [])
+
+    def test_append_eazvm_section_edge_cases(self):
+        """Verifies _append_eazvm_section edge cases: non-PE data and empty methods."""
+        # Non-PE input
+        non_pe = b"Hello, world! Not a PE."
+        self.assertEqual(EazfuscatorUnpacker._append_eazvm_section(non_pe, {}), non_pe)
+
+        # Truncated PE header (< 0x200)
+        short_mz = b"MZ" + b"\x00" * 100
+        self.assertEqual(EazfuscatorUnpacker._append_eazvm_section(short_mz, {}), short_mz)
+
 
 if __name__ == "__main__":
     unittest.main()

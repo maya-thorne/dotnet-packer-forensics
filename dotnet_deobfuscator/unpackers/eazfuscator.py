@@ -6,11 +6,12 @@ Engineered & Audited by Maya Thorne.
 import json
 import os
 import struct
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from .eazfuscator_vm import (
     EazfuscatorDevirtualizer,
     EazfuscatorVMDisassembler,
+    VMInstruction,
     VMOpcode,
     VMOpcodeTable,
 )
@@ -19,6 +20,17 @@ from .eazfuscator_vm import (
 class SecurityError(Exception):
     """Raised when malicious path traversal or payload tampering is detected."""
     pass
+
+
+__all__ = [
+    "EazfuscatorUnpacker",
+    "EazfuscatorVMDisassembler",
+    "EazfuscatorDevirtualizer",
+    "VMOpcode",
+    "VMOpcodeTable",
+    "VMInstruction",
+    "SecurityError",
+]
 
 
 class EazfuscatorUnpacker:
@@ -101,6 +113,7 @@ class EazfuscatorUnpacker:
         if len(data) < 16:
             return containers
 
+        seen_offsets: Set[int] = set()
         for magic in cls.VM_CONTAINER_MAGICS:
             pos = 0
             while True:
@@ -108,9 +121,11 @@ class EazfuscatorUnpacker:
                 if idx == -1:
                     break
 
-                container = cls._parse_container_at(data, idx, magic)
-                if container is not None and container.get("methods"):
-                    containers.append(container)
+                if idx not in seen_offsets:
+                    container = cls._parse_container_at(data, idx, magic)
+                    if container is not None and container.get("methods"):
+                        containers.append(container)
+                        seen_offsets.add(idx)
                 pos = idx + len(magic)
 
         return containers
@@ -136,7 +151,7 @@ class EazfuscatorUnpacker:
             # Method Entry: token (uint32), max_stack (uint16), bytecode_len (uint32)
             token, max_stack, b_len = struct.unpack_from("<IHI", data, curr)
             curr += 10
-            if b_len == 0 or curr + b_len > len(data):
+            if b_len == 0 or b_len > 10 * 1024 * 1024 or curr + b_len > len(data):
                 break
 
             bytecode = data[curr : curr + b_len]
@@ -162,7 +177,61 @@ class EazfuscatorUnpacker:
         }
 
     # =========================================================================
-    # 3. Assembly De-virtualization & PE Patching
+    # 3. Disassembly & Method De-virtualization
+    # =========================================================================
+
+    @classmethod
+    def disassemble_bytecode(
+        cls,
+        bytecode: bytes,
+        custom_table: Optional[VMOpcodeTable] = None,
+        base_address: int = 0,
+    ) -> List[VMInstruction]:
+        """Disassembles raw VM bytecode stream into decoded VMInstructions."""
+        disassembler = EazfuscatorVMDisassembler(opcode_table=custom_table or VMOpcodeTable())
+        return disassembler.disassemble(bytecode, base_address=base_address)
+
+    @classmethod
+    def disassemble_assembly(
+        cls,
+        data: bytes,
+        custom_table: Optional[VMOpcodeTable] = None,
+    ) -> List[Dict[str, Any]]:
+        """Extracts and disassembles all embedded VM method containers across the binary."""
+        containers = cls.extract_vm_containers(data)
+        disassembler = EazfuscatorVMDisassembler(opcode_table=custom_table or VMOpcodeTable())
+        results: List[Dict[str, Any]] = []
+        for c in containers:
+            for m in c.get("methods", []):
+                instructions = disassembler.disassemble(m["bytecode"])
+                results.append({
+                    "token": m["token"],
+                    "token_hex": m.get("token_hex", f"0x{m['token']:08X}"),
+                    "max_stack": m.get("max_stack", 8),
+                    "instruction_count": len(instructions),
+                    "instructions": instructions,
+                    "disassembly": "\n".join(inst.format() for inst in instructions),
+                })
+        return results
+
+    @classmethod
+    def devirtualize_method(
+        cls,
+        bytecode: bytes,
+        custom_table: Optional[VMOpcodeTable] = None,
+        max_stack: int = 8,
+        method_token: int = 0x06000001,
+    ) -> Dict[str, Any]:
+        """Disassembles a single VM method bytecode and translates it into ECMA-335 CIL."""
+        instructions = cls.disassemble_bytecode(bytecode, custom_table=custom_table)
+        return EazfuscatorDevirtualizer.devirtualize(
+            instructions=instructions,
+            max_stack=max_stack,
+            method_token=method_token,
+        )
+
+    # =========================================================================
+    # 4. Assembly De-virtualization & PE Patching
     # =========================================================================
 
     @classmethod
@@ -205,6 +274,8 @@ class EazfuscatorUnpacker:
         devirtualized_methods: Dict[int, Dict[str, Any]] = {}
         for m in all_methods:
             token = m["token"]
+            if token in devirtualized_methods:
+                continue
             bytecode = m["bytecode"]
             # Disassemble VM bytecode
             instructions = disassembler.disassemble(bytecode)
@@ -247,72 +318,100 @@ class EazfuscatorUnpacker:
         if len(pe_data) < 0x200 or not pe_data.startswith(b"MZ"):
             return pe_data
 
-        buf = bytearray(pe_data)
-        e_lfanew = struct.unpack_from("<I", buf, 0x3C)[0]
-        if e_lfanew + 24 > len(buf) or buf[e_lfanew : e_lfanew + 4] != b"PE\0\0":
+        try:
+            buf = bytearray(pe_data)
+            if len(buf) < 0x40:
+                return pe_data
+            e_lfanew = struct.unpack_from("<I", buf, 0x3C)[0]
+            # Require valid NT header signature and OptionalHeader fields up to SizeOfImage (e_lfanew + 84)
+            if e_lfanew + 84 > len(buf) or buf[e_lfanew : e_lfanew + 4] != b"PE\0\0":
+                return pe_data
+
+            num_sections = struct.unpack_from("<H", buf, e_lfanew + 6)[0]
+            opt_hdr_size = struct.unpack_from("<H", buf, e_lfanew + 20)[0]
+            if opt_hdr_size < 68:
+                return pe_data
+
+            sec_alignment = struct.unpack_from("<I", buf, e_lfanew + 56)[0]
+            file_alignment = struct.unpack_from("<I", buf, e_lfanew + 60)[0]
+
+            if sec_alignment == 0:
+                sec_alignment = 0x2000
+            if file_alignment == 0:
+                file_alignment = 0x200
+
+            sec_table_offset = e_lfanew + 24 + opt_hdr_size
+            if sec_table_offset > len(buf):
+                return pe_data
+
+            if num_sections == 0:
+                last_va = 0x1000
+                last_vsize = 0x1000
+                if sec_table_offset + 40 > len(buf):
+                    return pe_data
+            else:
+                last_sec_entry = sec_table_offset + (num_sections - 1) * 40
+                if last_sec_entry + 40 > len(buf):
+                    return pe_data
+                last_va = struct.unpack_from("<I", buf, last_sec_entry + 12)[0]
+                last_vsize = struct.unpack_from("<I", buf, last_sec_entry + 8)[0]
+
+            # Protect against section header collision with first section raw data
+            first_raw_ptr = struct.unpack_from("<I", buf, sec_table_offset + 20)[0] if num_sections > 0 else 0
+            new_sec_entry = sec_table_offset + num_sections * 40
+            if first_raw_ptr > 0 and new_sec_entry + 40 > first_raw_ptr:
+                return pe_data
+
+            new_va = ((last_va + last_vsize + sec_alignment - 1) // sec_alignment) * sec_alignment
+            new_raw_ptr = ((len(buf) + file_alignment - 1) // file_alignment) * file_alignment
+
+            # Assemble method bodies payload
+            payload = bytearray()
+            for token, m in sorted(methods.items()):
+                payload.extend(m.get("cor_il_method", b""))
+                # 4-byte align each method body
+                while len(payload) % 4 != 0:
+                    payload.append(0)
+
+            vsize = len(payload)
+            raw_size = ((vsize + file_alignment - 1) // file_alignment) * file_alignment
+            payload.extend(b"\x00" * (raw_size - len(payload)))
+
+            # Pad binary up to new_raw_ptr
+            if len(buf) < new_raw_ptr:
+                buf.extend(b"\x00" * (new_raw_ptr - len(buf)))
+
+            # Append payload bytes
+            buf.extend(payload)
+
+            # Write new section header entry (.eazvm)
+            if new_sec_entry + 40 > len(buf):
+                buf.extend(b"\x00" * (new_sec_entry + 40 - len(buf)))
+
+            sec_header = bytearray(40)
+            sec_header[0:7] = b".eazvm\x00"
+            struct.pack_into("<I", sec_header, 8, vsize)
+            struct.pack_into("<I", sec_header, 12, new_va)
+            struct.pack_into("<I", sec_header, 16, raw_size)
+            struct.pack_into("<I", sec_header, 20, new_raw_ptr)
+            # Characteristics: IMAGE_SCN_MEM_READ | IMAGE_SCN_CNT_INITIALIZED_DATA (0x40000040)
+            struct.pack_into("<I", sec_header, 36, 0x40000040)
+
+            buf[new_sec_entry : new_sec_entry + 40] = sec_header
+
+            # Increment NumberOfSections
+            struct.pack_into("<H", buf, e_lfanew + 6, num_sections + 1)
+
+            # Update SizeOfImage
+            new_size_of_image = ((new_va + vsize + sec_alignment - 1) // sec_alignment) * sec_alignment
+            struct.pack_into("<I", buf, e_lfanew + 80, new_size_of_image)
+
+            return bytes(buf)
+        except (struct.error, ValueError, IndexError, OverflowError):
             return pe_data
 
-        num_sections = struct.unpack_from("<H", buf, e_lfanew + 6)[0]
-        opt_hdr_size = struct.unpack_from("<H", buf, e_lfanew + 20)[0]
-        sec_alignment = struct.unpack_from("<I", buf, e_lfanew + 56)[0]
-        file_alignment = struct.unpack_from("<I", buf, e_lfanew + 60)[0]
-
-        if sec_alignment == 0:
-            sec_alignment = 0x2000
-        if file_alignment == 0:
-            file_alignment = 0x200
-
-        sec_table_offset = e_lfanew + 24 + opt_hdr_size
-        last_sec_entry = sec_table_offset + (num_sections - 1) * 40
-        last_va = struct.unpack_from("<I", buf, last_sec_entry + 12)[0]
-        last_vsize = struct.unpack_from("<I", buf, last_sec_entry + 8)[0]
-
-        new_va = ((last_va + last_vsize + sec_alignment - 1) // sec_alignment) * sec_alignment
-        new_raw_ptr = ((len(buf) + file_alignment - 1) // file_alignment) * file_alignment
-
-        # Assemble method bodies payload
-        payload = bytearray()
-        for token, m in sorted(methods.items()):
-            payload.extend(m.get("cor_il_method", b""))
-            # 4-byte align each method body
-            while len(payload) % 4 != 0:
-                payload.append(0)
-
-        vsize = len(payload)
-        raw_size = ((vsize + file_alignment - 1) // file_alignment) * file_alignment
-        payload.extend(b"\x00" * (raw_size - len(payload)))
-
-        # Pad binary up to new_raw_ptr
-        if len(buf) < new_raw_ptr:
-            buf.extend(b"\x00" * (new_raw_ptr - len(buf)))
-
-        # Append payload bytes
-        buf.extend(payload)
-
-        # Write new section header entry (.eazvm)
-        new_sec_entry = sec_table_offset + num_sections * 40
-        sec_header = bytearray(40)
-        sec_header[0:7] = b".eazvm\x00"
-        struct.pack_into("<I", sec_header, 8, vsize)
-        struct.pack_into("<I", sec_header, 12, new_va)
-        struct.pack_into("<I", sec_header, 16, raw_size)
-        struct.pack_into("<I", sec_header, 20, new_raw_ptr)
-        # Characteristics: IMAGE_SCN_MEM_READ | IMAGE_SCN_CNT_INITIALIZED_DATA (0x40000040)
-        struct.pack_into("<I", sec_header, 36, 0x40000040)
-
-        buf[new_sec_entry : new_sec_entry + 40] = sec_header
-
-        # Increment NumberOfSections
-        struct.pack_into("<H", buf, e_lfanew + 6, num_sections + 1)
-
-        # Update SizeOfImage
-        new_size_of_image = ((new_va + vsize + sec_alignment - 1) // sec_alignment) * sec_alignment
-        struct.pack_into("<I", buf, e_lfanew + 80, new_size_of_image)
-
-        return bytes(buf)
-
     # =========================================================================
-    # 4. Safe Directory Extraction
+    # 5. Safe Directory Extraction
     # =========================================================================
 
     @classmethod
@@ -331,6 +430,8 @@ class EazfuscatorUnpacker:
         written_files: List[str] = []
 
         rebuilt_pe, report = cls.devirtualize_assembly(data, custom_table=custom_table)
+        if not report.get("success") or report.get("methods_devirtualized_count", 0) == 0:
+            return []
 
         # 1. Write rebuilt PE binary
         rebuilt_path = os.path.join(real_output_dir, "restored_eazvm.exe")
@@ -365,7 +466,8 @@ class EazfuscatorUnpacker:
     def _safe_write(cls, file_path: str, content: bytes, target_dir: str) -> None:
         """Writes content to disk enforcing strict path traversal validation."""
         real_path = os.path.realpath(file_path)
-        if not real_path.startswith(target_dir + os.sep) and real_path != target_dir:
+        real_target = os.path.realpath(target_dir)
+        if not real_path.startswith(real_target + os.sep) and real_path != real_target:
             raise SecurityError(f"Directory traversal prevented: {file_path}")
         with open(real_path, "wb") as f:
             f.write(content)
