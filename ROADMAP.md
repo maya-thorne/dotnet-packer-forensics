@@ -17,6 +17,7 @@ This document tracks shipped capabilities and future engineering milestones for 
 - [x] **ArmDot Method-Level Virtual Machine Opcode Emulator & De-virtualizer** — Heuristic VM opcode recovery, abstract evaluation stack emulation, multi-pass relative branch fixups, CorILMethod Tiny/Fat header emission, .armdot PE section injection, and automated directory extraction with 18 dedicated unit tests.
 - [x] **IntelliLock Hardware Lock Defeat & License Envelope Neutralizer** — De-enveloping of encapsulated assemblies, LCG/XOR stream decryption, deterministic hardware fingerprint profiling and bypassing, synthetic perpetual master license (.lic) generation, Cor20Header EntryPoint restoration, and directory extraction with 22 dedicated unit tests.
 - [x] **DeepSea Control Flow De-flattening & AST Reconstructor** — ECMA-335 CIL opcode disassembler, opaque predicate pruning, state-machine loop de-flattening, symbolic block flow resolution, multi-pass branch offset calculation, high-level AST and C# pseudocode recovery, .deepsea PE section synthesis, and automated directory extraction with 17 dedicated unit tests.
+- [x] **CLI Metadata Anti-Tamper Heuristics & In-Memory JIT Dumper Engine** — ECMA-335 CorILMethod Tiny/Fat header parser and serializer, PRNG/LCG stream cipher decryption with cryptographic buffer zeroizing, JIT dumper ingestion interface supporting in-memory scans, structured JSON descriptors, and binary JITD streams, static anti-tamper detection across corrupted `#~`/`#-` tables, PE `.antitamper` section injection, and safe directory extraction with 26 dedicated unit tests.
 
 ---
 
@@ -30,3 +31,6 @@ This document tracks shipped capabilities and future engineering milestones for 
 - [ ] **Native AOT Hybrid CIL-Native Stub Disassembler & Symbol Carver** — Mixed-mode boundary inspection for compiled .NET 8/9 executables.
 - [ ] **.NET MAUI & Blazor WebAssembly AOT Package Forensics Engine** — Compressed Wasm virtual filesystem extraction and IL recovery.
 - [ ] **CIL Exception Handling (EH) Table Reconstruction & Clause Normalizer** — CorILMethod protected block structure recovery.
+- [ ] **JIT Compiler Method Hooking Interceptor & Emulation Bridge** — Static emulation of native JIT hooks and ICorJitCompiler transitions.
+- [ ] **Opaque Predicate Algebraic Simplification & SMT Solver Engine** — Elimination of complex identity-based dead code branches.
+- [ ] **Multi-Layer Steganographic PE Slack & High-Entropy Chunk Carver** — Extraction of hidden nested payloads within PE alignment gaps.
