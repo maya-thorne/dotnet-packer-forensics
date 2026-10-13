@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-10-13
+
+### Added
+- **Eazfuscator.NET Bytecode VM Disassembler & De-virtualizer (`dotnet_deobfuscator.unpackers.eazfuscator_vm` & `dotnet_deobfuscator.unpackers.eazfuscator`)**:
+  - Full static marker detection and confidence scoring for Eazfuscator.NET, Gapotchenko runtime stubs, and zero-width unicode identifier obfuscation.
+  - VM container carving engine: scans PE sections (`.text`, `.rdata`, custom data sections) and overlay for embedded `EAZVM` containers, extracting method metadata tokens, stack depth limits, and proprietary bytecodes.
+  - Semantic VM opcode architecture (`VMOpcode`) covering stack operations, constant loads, local/argument slots, arithmetic, bitwise logic, comparisons, branch instructions, invocations, and return flow.
+  - Dynamic VM opcode table manager (`VMOpcodeTable`) with heuristic mapping deduction from terminal instructions, relative branch boundaries, and metadata tokens, plus JSON export and import.
+  - VM bytecode disassembler (`EazfuscatorVMDisassembler`) producing structured instruction trees and human-readable disassembly text listings with resolved branch targets.
+  - ECMA-335 CIL de-virtualizer (`EazfuscatorDevirtualizer`) translating VM abstract instructions to standard CIL bytecodes, with two-pass relative branch fixup calculation and CorILMethod Tiny/Fat header emission.
+  - Assembly reconstruction pipeline synthesizing de-virtualized PE binaries with injected CIL methods into a dedicated aligned `.eazvm` section, incrementing section headers, and recalculating `SizeOfImage`.
+  - Directory extraction engine (`unpack_to_directory`) outputting rebuilt binaries, individual method CIL blobs, VM disassembly listings, and opcode tables with path traversal defenses and memory zeroizing.
+- **CLI & Core Orchestrator Integration**:
+  - Added `--devirtualize-eaz` and `--eaz-out` to unpack and reconstruct virtualized assemblies.
+  - Added `--disasm-vm` to disassemble embedded VM method containers directly to assembly text.
+  - Added `--vm-table` to specify custom opcode table mappings via JSON configuration files.
+  - Integrated Eazfuscator telemetry and VM container counts into `DotNetPackerCore.analyze_file` and CLI reports.
+  - Added `DotNetPackerCore.devirtualize_eazfuscator` and `DotNetPackerCore.disassemble_eazfuscator_vm` high-level APIs.
+- **Comprehensive Eazfuscator Test Suite (`tests/test_eazfuscator_unpacker.py`)**:
+  - 14 new unit and integration test cases covering opcode table mappings, heuristic deduction, arithmetic and relative branch disassembly, Tiny and Fat method header construction, token invocations, container carving, PE section injection, directory safety, and CLI execution (total test suite expanded to 93 tests).
+
 ## [1.5.0] - 2026-10-13
 
 ### Added

@@ -104,6 +104,10 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `--restore-necrobit` | Decrypt NecroBit CIL method bodies and reconstruct deobfuscated assembly | `False` |
 | `--necrobit-out` | Destination path for NecroBit restored assembly binary | None |
 | `--necrobit-seed` | Decryption seed integer for NecroBit PRNG stream cipher | `0x14725836` |
+| `--devirtualize-eaz` | De-virtualize Eazfuscator.NET VM methods and reconstruct assembly | `False` |
+| `--eaz-out` | Destination path for devirtualized assembly binary | None |
+| `--disasm-vm` | Disassemble Eazfuscator VM bytecode containers to formatted assembly | `False` |
+| `--vm-table` | Custom VM opcode table JSON configuration file path | None |
 | `--rebuild` | Reconstruct damaged PE headers, realign sections, and repair standalone binary | `False` |
 | `--rebuild-out` | Output destination path for rebuilt PE binary | None |
 | `--unmap-dump` | Force process memory dump unmapping (realign RVA mapped sections to disk raw offsets) | `False` |
@@ -114,7 +118,7 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v1.5.0` |
+| `--version` | Display engine version and exit | `v1.6.0` |
 
 </details>
 
@@ -228,6 +232,16 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td>Strips native wrapper envelopes, decrypts NecroBit token-keyed CIL method bodies, restores Tiny/Fat headers, and synthesizes .necro sections.</td>
     </tr>
     <tr>
+      <td><code>dotnet_deobfuscator/unpackers/eazfuscator_vm.py</code></td>
+      <td><b>Eazfuscator VM Disassembler</b></td>
+      <td>Decodes proprietary Eazfuscator.NET VM bytecodes, supports dynamic/heuristic opcode table mapping, and devirtualizes AST into ECMA-335 CIL.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/unpackers/eazfuscator.py</code></td>
+      <td><b>Eazfuscator Unpacker Engine</b></td>
+      <td>Carves embedded VM bytecode containers across PE sections and overlay, synthesizes aligned .eazvm sections, and extracts devirtualized assemblies.</td>
+    </tr>
+    <tr>
       <td><code>dotnet_deobfuscator/pe_rebuilder.py</code></td>
       <td><b>PE Header &amp; Section Rebuilder</b></td>
       <td>Reconstructs damaged PE headers, realigns section tables, unmaps process memory dumps, and recovers CLR Cor20Header descriptors.</td>
@@ -321,6 +335,11 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>tests/test_reactor_unpacker.py</code></td>
       <td><b>.NET Reactor Unpacker Test</b></td>
       <td>Validates native stub envelope carving, XOR/compressed stream de-enveloping, NecroBit token decryption, CorILMethod parsing, and .necro section reconstruction.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_eazfuscator_unpacker.py</code></td>
+      <td><b>Eazfuscator Unpacker Test</b></td>
+      <td>Validates opcode table inference, bytecode disassembly, CIL Tiny/Fat translation, branch relative fixups, .eazvm PE section injection, and CLI flags.</td>
     </tr>
   </tbody>
 </table>

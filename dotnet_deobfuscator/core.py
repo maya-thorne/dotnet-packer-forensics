@@ -18,6 +18,8 @@ from .pe_rebuilder import PERebuilder, PERebuildOptions, PERebuildReport
 from .signatures import ProtectorSignatures
 from .unpackers.confuserex import ConfuserExUnpacker
 from .unpackers.costura import CosturaUnpacker
+from .unpackers.eazfuscator import EazfuscatorUnpacker
+from .unpackers.eazfuscator_vm import EazfuscatorVMDisassembler, VMOpcodeTable
 from .unpackers.reactor import DotNetReactorUnpacker
 
 
@@ -83,10 +85,14 @@ class DotNetPackerCore:
         reactor_payloads = DotNetReactorUnpacker.unpack(data)
         reactor_methods = DotNetReactorUnpacker.extract_necrobit_methods(data)
 
-        # 7. PE Structural Health & Section Rebuilder Diagnostics
+        # 7. Eazfuscator.NET VM Forensics & Virtualized Method Containers
+        eaz_detect = EazfuscatorUnpacker.detect(data)
+        eaz_containers = EazfuscatorUnpacker.extract_vm_containers(data)
+
+        # 8. PE Structural Health & Section Rebuilder Diagnostics
         pe_diag = PERebuilder.detect_anomalies(data)
 
-        # 8. Cryptographic Hashes & Integrity Baselines
+        # 9. Cryptographic Hashes & Integrity Baselines
         hashes = PayloadVerifier.compute_hashes(data)
 
         return {
@@ -198,6 +204,24 @@ class DotNetPackerCore:
                     for p in reactor_payloads
                 ],
             },
+            "eazfuscator": {
+                "detected": eaz_detect["is_eazfuscator"],
+                "confidence": eaz_detect["confidence"],
+                "has_virtual_machine": eaz_detect["has_virtual_machine"],
+                "vm_method_count": eaz_detect["vm_method_count"],
+                "vm_containers_count": eaz_detect["vm_containers_count"],
+                "matched_markers": eaz_detect["matched_markers"],
+                "containers": [
+                    {
+                        "offset": f"0x{c['offset']:X}",
+                        "magic": c["magic"],
+                        "version": c["version"],
+                        "method_count": c["method_count"],
+                        "tokens": [m["token_hex"] for m in c.get("methods", [])],
+                    }
+                    for c in eaz_containers
+                ],
+            },
         }
 
     @classmethod
@@ -259,17 +283,27 @@ class DotNetPackerCore:
                 f.write(reactor_payloads[0]["payload_bytes"])
             return True
 
+        # Check if Eazfuscator VM containers exist
+        eaz_containers = EazfuscatorUnpacker.extract_vm_containers(data)
+        if eaz_containers:
+            rebuilt_pe, rep = EazfuscatorUnpacker.devirtualize_assembly(data)
+            if rep.get("success") or rep.get("methods_devirtualized_count", 0) > 0:
+                with open(output_path, "wb") as f:
+                    f.write(rebuilt_pe)
+                return True
+
         return False
 
     @classmethod
     def unpack_to_dir(cls, input_path: str, output_dir: str) -> List[Dict[str, any]]:
-        """Extracts all embedded Costura, ConfuserEx, and .NET Reactor assemblies into target directory."""
+        """Extracts all embedded Costura, ConfuserEx, .NET Reactor, and Eazfuscator assemblies into target directory."""
         with open(input_path, "rb") as f:
             data = f.read()
         written = []
         written.extend(CosturaUnpacker.unpack_to_directory(data, output_dir))
         written.extend(ConfuserExUnpacker.unpack_to_directory(data, output_dir))
         written.extend(DotNetReactorUnpacker.unpack_to_directory(data, output_dir))
+        written.extend(EazfuscatorUnpacker.unpack_to_directory(data, output_dir))
         return written
 
     @classmethod
@@ -296,6 +330,42 @@ class DotNetPackerCore:
             with open(output_path, "wb") as f:
                 f.write(restored_pe)
         return rep
+
+    @classmethod
+    def devirtualize_eazfuscator(
+        cls,
+        input_path: str,
+        output_path: Optional[str] = None,
+        custom_table: Optional[VMOpcodeTable] = None,
+    ) -> Tuple[bytes, Dict[str, any]]:
+        """De-virtualizes Eazfuscator.NET virtual machine methods and optionally writes restored PE to file."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        rebuilt_pe, rep = EazfuscatorUnpacker.devirtualize_assembly(data, custom_table=custom_table)
+        if output_path and (rep.get("success") or rep.get("methods_devirtualized_count", 0) > 0):
+            with open(output_path, "wb") as f:
+                f.write(rebuilt_pe)
+        return rebuilt_pe, rep
+
+    @classmethod
+    def disassemble_eazfuscator_vm(
+        cls, input_path: str, custom_table: Optional[VMOpcodeTable] = None
+    ) -> List[Dict[str, any]]:
+        """Disassembles all embedded Eazfuscator VM method containers to formatted assembly."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        containers = EazfuscatorUnpacker.extract_vm_containers(data)
+        disassembler = EazfuscatorVMDisassembler(opcode_table=custom_table or VMOpcodeTable())
+        disassembled_methods: List[Dict[str, any]] = []
+        for c in containers:
+            for m in c.get("methods", []):
+                instructions = disassembler.disassemble(m["bytecode"])
+                disassembled_methods.append({
+                    "token": m["token_hex"],
+                    "instruction_count": len(instructions),
+                    "disassembly": "\n".join(inst.format() for inst in instructions),
+                })
+        return disassembled_methods
 
     @classmethod
     def dump_strings(cls, input_path: str) -> List[str]:

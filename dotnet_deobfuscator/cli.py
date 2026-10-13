@@ -13,6 +13,7 @@ from . import __version__
 from .core import DotNetPackerCore
 from .payload_verifier import PayloadVerifier
 from .pe_rebuilder import PERebuildOptions
+from .unpackers.eazfuscator_vm import VMOpcodeTable
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -75,6 +76,24 @@ def build_parser() -> argparse.ArgumentParser:
         type=lambda x: int(x, 0),
         default=0x14725836,
         help="Decryption seed integer for NecroBit PRNG stream cipher (default: 0x14725836)",
+    )
+    parser.add_argument(
+        "--devirtualize-eaz",
+        action="store_true",
+        help="De-virtualize Eazfuscator.NET VM methods and reconstruct assembly",
+    )
+    parser.add_argument(
+        "--eaz-out",
+        help="Destination path for devirtualized assembly binary",
+    )
+    parser.add_argument(
+        "--disasm-vm",
+        action="store_true",
+        help="Disassemble Eazfuscator VM bytecode containers to formatted assembly",
+    )
+    parser.add_argument(
+        "--vm-table",
+        help="Custom VM opcode table JSON configuration file path",
     )
     parser.add_argument(
         "--verify",
@@ -220,6 +239,24 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
     else:
         lines.append("  [-] No .NET Reactor protection artifacts detected.")
 
+    eaz = report.get("eazfuscator", {})
+    lines.append("")
+    lines.append("--- [Eazfuscator.NET VM Forensics & De-virtualizer] ---")
+    if eaz.get("detected"):
+        lines.append(f"  [+] Eazfuscator.NET Detected! (Confidence: {eaz.get('confidence', 'HIGH')})")
+        if eaz.get("has_virtual_machine"):
+            lines.append(f"      Virtual Machine    : YES ({eaz.get('vm_method_count', 0)} virtualized methods in {eaz.get('vm_containers_count', 0)} containers)")
+        if eaz.get("matched_markers"):
+            lines.append(f"      Matched Markers    : {', '.join(eaz['matched_markers'])}")
+        if eaz.get("containers"):
+            lines.append("      VM Containers:")
+            for c in eaz["containers"][:5]:
+                lines.append(f"        * Container @ {c['offset']} (v{c['version']}, {c['method_count']} methods, Magic: {c['magic']})")
+                for t in c.get("tokens", [])[:4]:
+                    lines.append(f"          - Method Token: {t}")
+    else:
+        lines.append("  [-] No Eazfuscator.NET virtualization artifacts detected.")
+
     pe_reb = report.get("pe_rebuilder", {})
     lines.append("")
     lines.append("--- [PE Structural Health & Rebuilder Diagnostics] ---")
@@ -331,6 +368,41 @@ def main(argv: Optional[list] = None) -> int:
                 sys.stdout.write(f"    * {act}\n")
         except Exception as e:
             sys.stderr.write(f"[-] NecroBit restoration failed: {e}\n")
+
+    # Disassemble Eazfuscator VM bytecode containers if requested
+    if args.disasm_vm:
+        try:
+            custom_tbl = None
+            if args.vm_table:
+                with open(args.vm_table, "r", encoding="utf-8") as f:
+                    custom_tbl = VMOpcodeTable.from_dict(json.load(f))
+            disasm_res = DotNetPackerCore.disassemble_eazfuscator_vm(args.target, custom_table=custom_tbl)
+            sys.stdout.write(f"[+] Disassembled {len(disasm_res)} Eazfuscator VM method bodies:\n")
+            for item in disasm_res:
+                sys.stdout.write(f"\n--- Method {item['token']} ({item['instruction_count']} VM instructions) ---\n")
+                sys.stdout.write(item["disassembly"] + "\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] VM disassembly failed: {e}\n")
+
+    # De-virtualize Eazfuscator VM assembly if requested
+    if args.devirtualize_eaz:
+        try:
+            custom_tbl = None
+            if args.vm_table:
+                with open(args.vm_table, "r", encoding="utf-8") as f:
+                    custom_tbl = VMOpcodeTable.from_dict(json.load(f))
+            dest_path = args.eaz_out or args.output or f"{args.target}.devirtualized.exe"
+            rebuilt_pe, eaz_rep = DotNetPackerCore.devirtualize_eazfuscator(
+                args.target, output_path=dest_path, custom_table=custom_tbl
+            )
+            count = eaz_rep.get("methods_devirtualized_count", 0)
+            sys.stdout.write(
+                f"[+] Successfully de-virtualized {count} Eazfuscator VM methods -> {dest_path}\n"
+            )
+            for act in eaz_rep.get("actions_applied", []):
+                sys.stdout.write(f"    * {act}\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] Eazfuscator de-virtualization failed: {e}\n")
 
     # Dump decrypted ConfuserEx strings if requested
     if args.dump_strings:
