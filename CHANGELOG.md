@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-10-13
+
+### Added
+- **ArmDot Method-Level Virtual Machine Opcode Emulator & De-virtualizer (`dotnet_deobfuscator.unpackers.armdot_vm`, `dotnet_deobfuscator.unpackers.armdot_rebuilder` & `dotnet_deobfuscator.unpackers.armdot`)**:
+  - Full static signature detection and confidence heuristic scoring for ArmDot protector artifacts (`ArmDot.Client.VirtualizeAttribute`, `ArmDot.Client.ObfuscateNamesAttribute`, `ArmDot.Client.ProtectAttribute`, `ArmDot.Engine`, `.armdot`).
+  - Embedded VM container carving across PE sections (`.text`, `.rdata`, custom data sections) and overlay, parsing container headers, method descriptors, tokens, stack depths, and encrypted method bytecode streams.
+  - Symmetric rolling LCG/XOR bytecode decryption inverting ArmDot stream ciphers with intermediate key schedule zeroization.
+  - Semantic VM opcode architecture (`ArmDotOpcode`) covering stack operations, constant loads, local/argument slots, arithmetic, bitwise logic, comparisons, branch instructions, switch tables, member invocations, conversions, and exception handling.
+  - Dynamic VM opcode table manager (`ArmDotOpcodeTable`) with heuristic mapping deduction from terminal instructions, relative branch boundaries, and metadata tokens, plus JSON export and import.
+  - Abstract evaluation stack emulator (`ArmDotStackEmulator`) computing stack balance, calculating required max_stack depth, and detecting underflows or stack leaks.
+  - ECMA-335 CIL de-virtualizer (`ArmDotDevirtualizer`) translating VM instructions to standard CIL bytecodes with multi-pass relative short/long branch resolution and CorILMethod Tiny/Fat header emission.
+  - Assembly reconstruction pipeline synthesizing de-virtualized PE binaries with injected CIL methods into an aligned `.armdot` section, incrementing section headers, and recalculating `SizeOfImage`.
+  - Safe directory extraction (`unpack_to_directory`) generating rebuilt executables, individual method CIL blobs, VM disassembly listings, and opcode tables with path traversal defenses and memory zeroizing.
+- **CLI & Core Orchestrator Integration**:
+  - Added `--devirtualize-armdot` and `--armdot-out` to unpack and reconstruct virtualized assemblies.
+  - Added `--disasm-armdot` to disassemble embedded ArmDot VM method containers to formatted assembly.
+  - Added `--armdot-table` to specify custom opcode table mappings via JSON configuration files.
+  - Integrated ArmDot telemetry and VM container metrics into `DotNetPackerCore.analyze_file` and CLI reports.
+  - Added `DotNetPackerCore.devirtualize_armdot`, `DotNetPackerCore.disassemble_armdot_vm`, and `DotNetPackerCore.extract_armdot_containers` high-level APIs.
+- **Comprehensive ArmDot Test Suite (`tests/test_armdot_unpacker.py`)**:
+  - 18 unit and integration test cases covering opcode table mappings, heuristic deduction, arithmetic and relative branch disassembly, Tiny and Fat method header construction, stream cipher decryption, container carving, PE section injection, directory safety, and CLI execution (total test suite expanded to 147 tests).
+
 ## [1.7.0] - 2026-10-13
 
 ### Added

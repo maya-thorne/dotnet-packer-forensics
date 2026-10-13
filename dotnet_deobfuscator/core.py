@@ -16,6 +16,11 @@ from .payload_verifier import (
 from .pe_overlay import PEOverlayParser
 from .pe_rebuilder import PERebuilder, PERebuildOptions, PERebuildReport
 from .signatures import ProtectorSignatures
+from .unpackers.armdot import (
+    ArmDotOpcodeTable,
+    ArmDotUnpacker,
+    ArmDotVMDisassembler,
+)
 from .unpackers.babel import BabelUnpacker
 from .unpackers.confuserex import ConfuserExUnpacker
 from .unpackers.costura import CosturaUnpacker
@@ -94,7 +99,11 @@ class DotNetPackerCore:
         babel_detect = BabelUnpacker.detect(data)
         babel_merged = BabelUnpacker.extract_merged_assemblies(data)
 
-        # 9. PE Structural Health & Section Rebuilder Diagnostics
+        # 9. ArmDot Method-Level Virtual Machine Forensics & Containers
+        armdot_detect = ArmDotUnpacker.detect(data)
+        armdot_containers = ArmDotUnpacker.extract_vm_containers(data)
+
+        # 10. PE Structural Health & Section Rebuilder Diagnostics
         pe_diag = PERebuilder.detect_anomalies(data)
 
         # 9. Cryptographic Hashes & Integrity Baselines
@@ -248,6 +257,24 @@ class DotNetPackerCore:
                     for m in babel_merged
                 ],
             },
+            "armdot": {
+                "detected": armdot_detect["is_armdot"],
+                "confidence": armdot_detect["confidence"],
+                "has_virtual_machine": armdot_detect["has_virtual_machine"],
+                "vm_method_count": armdot_detect["vm_method_count"],
+                "vm_containers_count": armdot_detect["vm_containers_count"],
+                "matched_markers": armdot_detect["matched_markers"],
+                "containers": [
+                    {
+                        "offset": f"0x{c['offset']:X}",
+                        "magic": c["magic"],
+                        "version": c["version"],
+                        "method_count": c["method_count"],
+                        "tokens": [m["token_hex"] for m in c.get("methods", [])],
+                    }
+                    for c in armdot_containers
+                ],
+            },
         }
 
     @classmethod
@@ -325,11 +352,20 @@ class DotNetPackerCore:
                 f.write(babel_merged[0]["payload_bytes"])
             return True
 
+        # Check if ArmDot VM containers exist
+        armdot_containers = ArmDotUnpacker.extract_vm_containers(data)
+        if armdot_containers:
+            rebuilt_pe, rep = ArmDotUnpacker.devirtualize_assembly(data)
+            if rep.get("success") or rep.get("methods_devirtualized_count", 0) > 0:
+                with open(output_path, "wb") as f:
+                    f.write(rebuilt_pe)
+                return True
+
         return False
 
     @classmethod
     def unpack_to_dir(cls, input_path: str, output_dir: str) -> List[Dict[str, any]]:
-        """Extracts all embedded Costura, ConfuserEx, .NET Reactor, Eazfuscator, and Babel assemblies into target directory."""
+        """Extracts all embedded Costura, ConfuserEx, .NET Reactor, Eazfuscator, Babel, and ArmDot assemblies into target directory."""
         with open(input_path, "rb") as f:
             data = f.read()
         written = []
@@ -338,6 +374,7 @@ class DotNetPackerCore:
         written.extend(DotNetReactorUnpacker.unpack_to_directory(data, output_dir))
         written.extend(EazfuscatorUnpacker.unpack_to_directory(data, output_dir))
         written.extend(BabelUnpacker.unpack_to_directory(data, output_dir))
+        written.extend(ArmDotUnpacker.unpack_to_directory(data, output_dir))
         return written
 
     @classmethod
@@ -423,6 +460,49 @@ class DotNetPackerCore:
                     "disassembly": "\n".join(inst.format() for inst in instructions),
                 })
         return disassembled_methods
+
+    @classmethod
+    def devirtualize_armdot(
+        cls,
+        input_path: str,
+        output_path: Optional[str] = None,
+        custom_table: Optional[ArmDotOpcodeTable] = None,
+    ) -> Tuple[bytes, Dict[str, any]]:
+        """De-virtualizes ArmDot virtual machine methods and optionally writes restored PE to file."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        rebuilt_pe, rep = ArmDotUnpacker.devirtualize_assembly(data, custom_table=custom_table)
+        if output_path and (rep.get("success") or rep.get("methods_devirtualized_count", 0) > 0):
+            with open(output_path, "wb") as f:
+                f.write(rebuilt_pe)
+        return rebuilt_pe, rep
+
+    @classmethod
+    def disassemble_armdot_vm(
+        cls, input_path: str, custom_table: Optional[ArmDotOpcodeTable] = None
+    ) -> List[Dict[str, any]]:
+        """Disassembles all embedded ArmDot VM method containers to formatted assembly."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        containers = ArmDotUnpacker.extract_vm_containers(data)
+        disassembler = ArmDotVMDisassembler(opcode_table=custom_table or ArmDotOpcodeTable())
+        disassembled_methods: List[Dict[str, any]] = []
+        for c in containers:
+            for m in c.get("methods", []):
+                instructions = disassembler.disassemble(m["bytecode"])
+                disassembled_methods.append({
+                    "token": m["token_hex"],
+                    "instruction_count": len(instructions),
+                    "disassembly": "\n".join(inst.format() for inst in instructions),
+                })
+        return disassembled_methods
+
+    @classmethod
+    def extract_armdot_containers(cls, input_path: str) -> List[Dict[str, any]]:
+        """Carves all ArmDot virtual machine method containers embedded in the binary."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        return ArmDotUnpacker.extract_vm_containers(data)
 
     @classmethod
     def dump_strings(cls, input_path: str) -> List[str]:

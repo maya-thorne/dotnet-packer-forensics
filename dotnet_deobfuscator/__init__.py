@@ -16,6 +16,14 @@ from .payload_verifier import (
 from .pe_overlay import PEOverlayParser
 from .pe_rebuilder import PERebuilder, PERebuildOptions, PERebuildReport
 from .signatures import ProtectorSignatures
+from .unpackers.armdot import (
+    ArmDotDevirtualizer,
+    ArmDotInstruction,
+    ArmDotOpcode,
+    ArmDotOpcodeTable,
+    ArmDotUnpacker,
+    ArmDotVMDisassembler,
+)
 from .unpackers.babel import BabelUnpacker
 from .unpackers.babel_demangler import (
     AssemblyNode,
@@ -36,7 +44,7 @@ from .unpackers.eazfuscator_vm import (
 )
 from .unpackers.reactor import DotNetReactorUnpacker
 
-__version__ = "1.7.0"
+__version__ = "1.8.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -68,5 +76,11 @@ __all__ = [
     "DemangledSymbol",
     "AssemblyNode",
     "DependencyGraph",
+    "ArmDotUnpacker",
+    "ArmDotOpcode",
+    "ArmDotOpcodeTable",
+    "ArmDotInstruction",
+    "ArmDotVMDisassembler",
+    "ArmDotDevirtualizer",
     "__version__",
 ]
