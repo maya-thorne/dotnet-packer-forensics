@@ -26,6 +26,7 @@ from .unpackers.confuserex import ConfuserExUnpacker
 from .unpackers.costura import CosturaUnpacker
 from .unpackers.eazfuscator import EazfuscatorUnpacker
 from .unpackers.eazfuscator_vm import EazfuscatorVMDisassembler, VMOpcodeTable
+from .unpackers.deepsea import DeepSeaUnpacker
 from .unpackers.intellilock import IntelliLockUnpacker
 from .unpackers.intellilock_models import HardwareProfile, VirtualLicense
 from .unpackers.reactor import DotNetReactorUnpacker
@@ -108,10 +109,13 @@ class DotNetPackerCore:
         # 10. IntelliLock License Management Envelope & Hardware Locking Forensics
         intellilock_detect = IntelliLockUnpacker.detect(data)
 
-        # 11. PE Structural Health & Section Rebuilder Diagnostics
+        # 11. DeepSea Obfuscator Control Flow Flattening Forensics
+        deepsea_detect = DeepSeaUnpacker.detect(data)
+
+        # 12. PE Structural Health & Section Rebuilder Diagnostics
         pe_diag = PERebuilder.detect_anomalies(data)
 
-        # 12. Cryptographic Hashes & Integrity Baselines
+        # 13. Cryptographic Hashes & Integrity Baselines
         hashes = PayloadVerifier.compute_hashes(data)
 
         return {
@@ -289,6 +293,13 @@ class DotNetPackerCore:
                 "markers_found": intellilock_detect["markers_found"],
                 "sections_matched": intellilock_detect["sections_matched"],
             },
+            "deepsea": {
+                "detected": deepsea_detect["is_deepsea"],
+                "confidence": deepsea_detect["confidence"],
+                "matched_markers": deepsea_detect["matched_markers"],
+                "switch_density": deepsea_detect["switch_density"],
+                "state_var_density": deepsea_detect["state_var_density"],
+            },
         }
 
     @classmethod
@@ -375,11 +386,19 @@ class DotNetPackerCore:
                     f.write(rebuilt_pe)
                 return True
 
+        # Check if DeepSea flattened methods exist
+        deepsea_detect = DeepSeaUnpacker.detect(data)
+        if deepsea_detect["is_deepsea"]:
+            rebuilt_pe, rep = DeepSeaUnpacker.deflatten_assembly(data)
+            with open(output_path, "wb") as f:
+                f.write(rebuilt_pe)
+            return True
+
         return False
 
     @classmethod
     def unpack_to_dir(cls, input_path: str, output_dir: str) -> List[Dict[str, any]]:
-        """Extracts all embedded Costura, ConfuserEx, .NET Reactor, Eazfuscator, Babel, and ArmDot assemblies into target directory."""
+        """Extracts all embedded Costura, ConfuserEx, .NET Reactor, Eazfuscator, Babel, ArmDot, and DeepSea assemblies into target directory."""
         with open(input_path, "rb") as f:
             data = f.read()
         written = []
@@ -389,6 +408,8 @@ class DotNetPackerCore:
         written.extend(EazfuscatorUnpacker.unpack_to_directory(data, output_dir))
         written.extend(BabelUnpacker.unpack_to_directory(data, output_dir))
         written.extend(ArmDotUnpacker.unpack_to_directory(data, output_dir))
+        if DeepSeaUnpacker.detect(data)["is_deepsea"]:
+            DeepSeaUnpacker.unpack_to_directory(data, output_dir)
         return written
 
     @classmethod
@@ -634,4 +655,35 @@ class DotNetPackerCore:
         return IntelliLockUnpacker.unpack_to_directory(
             data, output_dir=output_dir, master_seed=master_seed
         )
+
+    @classmethod
+    def deflatten_deepsea(
+        cls,
+        input_path: str,
+        output_path: Optional[str] = None,
+    ) -> Tuple[bytes, Dict[str, Any]]:
+        """De-flattens DeepSea obfuscated assembly and writes output PE if specified."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        rebuilt_pe, rep = DeepSeaUnpacker.deflatten_assembly(data)
+        if output_path:
+            with open(output_path, "wb") as f:
+                f.write(rebuilt_pe)
+        return rebuilt_pe, rep
+
+    @classmethod
+    def deflatten_deepsea_method(
+        cls, bytecode: bytes, method_name: str = "Method"
+    ) -> Dict[str, Any]:
+        """De-flattens a single CIL method bytecode stream and reconstructs AST."""
+        return DeepSeaUnpacker.deflatten_method(bytecode, method_name=method_name)
+
+    @classmethod
+    def unpack_deepsea_dir(
+        cls, input_path: str, output_dir: str
+    ) -> Dict[str, Any]:
+        """Unpacks de-flattened binary, AST JSON, and CFG diagrams to directory."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        return DeepSeaUnpacker.unpack_to_directory(data, output_dir=output_dir)
 

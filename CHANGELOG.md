@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-10-13
+
+### Added
+- **DeepSea Obfuscator Control Flow De-flattening & AST Reconstruction Engine (`dotnet_deobfuscator.unpackers.deepsea_models`, `dotnet_deobfuscator.unpackers.deepsea_deflattener`, `dotnet_deobfuscator.unpackers.deepsea`)**:
+  - Full static signature detection and heuristic confidence scoring for DeepSea Obfuscator artifacts (`DeepSeaObfuscator`, `DeepSea Obfuscator`, `DeepSeaAttribute`, `__DeepSea`, `DSAttribute`, `.deepsea`), switch instruction density, and state variable store patterns.
+  - Bytecode disassembler (`CILDisassembler`) parsing single-byte and two-byte (`0xFE` prefix) ECMA-335 CIL instructions, operand types, short/long relative branches, and jump table switch vectors.
+  - Constant folding and opaque predicate eliminator (`OpaquePredicateEliminator`) detecting and pruning constant conditional branches (`ldc.i4.0`/`ldc.i4.1` followed by `brtrue`/`brfalse`).
+  - Control flow de-flattener (`DeepSeaDeflattener`) partitioning CIL instructions into basic blocks based on leader offsets, identifying state variable allocation in method prologues, locating switch loop dispatchers, demuxing state-to-block transitions, symbolically extracting successor relationships, and stripping dispatch loops.
+  - Multi-pass relative branch offset resolver and bytecode emitter (`CILEmitter`) reassembling de-flattened basic blocks into compliant ECMA-335 CIL streams with automatic short/long branch opcode expansion.
+  - High-level Abstract Syntax Tree reconstructor (`ASTReconstructor`) recovering structured control flow blocks, generating structured JSON AST representations, and emitting formatted C# pseudocode.
+  - Assembly reconstruction pipeline (`deflatten_assembly`) synthesizing clean PE binaries with restored `.deepsea` sections, incrementing section tables, and realigning `SizeOfImage`.
+  - Safe directory export pipeline (`unpack_to_directory`) generating de-flattened executables, individual method CIL blobs, AST JSON trees, C# pseudocode listings, Graphviz DOT graphs, and Mermaid flowcharts with strict path traversal boundary verification.
+- **CLI & Core Orchestrator Integration**:
+  - Added `--deflatten-deepsea` and `--deepsea-out` flags to de-flatten protected assemblies and output repaired binaries.
+  - Added `--export-ast` and `--export-cfg` to export Abstract Syntax Trees (JSON) and Control Flow Graphs (Graphviz DOT).
+  - Integrated DeepSea telemetry into `DotNetPackerCore.analyze_file` and text/JSON reporting.
+  - Added `DotNetPackerCore.deflatten_deepsea`, `DotNetPackerCore.deflatten_deepsea_method`, and `DotNetPackerCore.unpack_deepsea_dir` programmatic APIs.
+- **Comprehensive DeepSea Test Suite (`tests/test_deepsea_unpacker.py`)**:
+  - 17 unit and integration test cases covering instruction disassembly, two-byte opcodes, switch table parsing, opaque predicate pruning, basic block slicing, state machine de-flattening, multi-pass CIL bytecode emission, AST reconstruction, Graphviz DOT and Mermaid exports, signature detection, PE section injection, directory safety, and CLI execution (expanding the total test suite to 187 tests).
+
 ## [1.9.0] - 2026-10-13
 
 ### Added

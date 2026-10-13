@@ -15,7 +15,7 @@
 
 [![Engine](https://img.shields.io/badge/Engine-Python_Zero--Dependency-10b981.svg)](#4-repository-structure--source-code-breakdown)
 [![Dual-XOR Carve](https://img.shields.io/badge/Forensics-xorPacker_PE_Overlay-0ea5e9.svg)](#1-architecture--forensic-pipeline)
-[![Protector Signatures](https://img.shields.io/badge/Signatures-8_Major_Packers-f59e0b.svg)](#3-core-research-whitepapers)
+[![Protector Signatures](https://img.shields.io/badge/Signatures-9_Major_Packers-f59e0b.svg)](#3-core-research-whitepapers)
 [![Release](https://img.shields.io/github/v/release/maya-thorne/dotnet-packer-forensics?color=10b981&label=Release&logo=github)](https://github.com/maya-thorne/dotnet-packer-forensics/releases)
 [![License: MT-SRL](https://img.shields.io/badge/License-MT--SRL-blue.svg)](./LICENSE)
 
@@ -121,6 +121,10 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `--bypass-hwlock` | Generate synthetic hardware license to bypass hardware locking and trial expiration | `False` |
 | `--gen-license` | Generate a valid synthetic perpetual master license (.lic) file | `False` |
 | `--license-out` | Destination file path for generated synthetic license (.lic) | None |
+| `--deflatten-deepsea` | De-flatten DeepSea control flow distortion and reconstruct clean CIL methods | `False` |
+| `--deepsea-out` | Destination path for de-flattened assembly binary | None |
+| `--export-ast` | Export high-level Abstract Syntax Tree (AST) in JSON format | `False` |
+| `--export-cfg` | Export de-flattened Control Flow Graph (CFG) in Graphviz DOT format | `False` |
 | `--rebuild` | Reconstruct damaged PE headers, realign sections, and repair standalone binary | `False` |
 | `--rebuild-out` | Output destination path for rebuilt PE binary | None |
 | `--unmap-dump` | Force process memory dump unmapping (realign RVA mapped sections to disk raw offsets) | `False` |
@@ -131,7 +135,7 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v1.9.0` |
+| `--version` | Display engine version and exit | `v2.0.0` |
 
 </details>
 
@@ -295,6 +299,21 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td>Carves enveloped assemblies, inverts LCG/XOR ciphers, defeats hardware locking, restores Cor20Header EntryPoints, and manages safe directory exports.</td>
     </tr>
     <tr>
+      <td><code>dotnet_deobfuscator/unpackers/deepsea_models.py</code></td>
+      <td><b>DeepSea Models &amp; AST</b></td>
+      <td>Encapsulates CIL instruction definitions, basic block flow models, Control Flow Graph representations, and structured AST nodes.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/unpackers/deepsea_deflattener.py</code></td>
+      <td><b>Control Flow De-flattener</b></td>
+      <td>Disassembles CIL bytecodes, prunes opaque predicates, resolves state-machine switch loops, reorders basic blocks, and emits clean CIL.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/unpackers/deepsea.py</code></td>
+      <td><b>DeepSea Unpacker Engine</b></td>
+      <td>Scans DeepSea signatures, de-flattens CIL method bodies, injects .deepsea PE sections, and manages safe directory artifact exports.</td>
+    </tr>
+    <tr>
       <td><code>dotnet_deobfuscator/pe_rebuilder.py</code></td>
       <td><b>PE Header &amp; Section Rebuilder</b></td>
       <td>Reconstructs damaged PE headers, realigns section tables, unmaps process memory dumps, and recovers CLR Cor20Header descriptors.</td>
@@ -403,6 +422,16 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>tests/test_armdot_unpacker.py</code></td>
       <td><b>ArmDot VM Unpacker &amp; Rebuilder Test</b></td>
       <td>Validates VM opcode deduction, bytecode disassembly, abstract stack balance, relative branch resolution, CorILMethod Tiny/Fat emission, and PE section injection.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_intellilock_unpacker.py</code></td>
+      <td><b>IntelliLock Unpacker Test</b></td>
+      <td>Validates hardware ID hashing, perpetual license generation, LCG/XOR stream decryption, container carving, PE header restoration, and directory safety.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_deepsea_unpacker.py</code></td>
+      <td><b>DeepSea De-flattener &amp; AST Test</b></td>
+      <td>Validates CIL instruction disassembly, opaque predicate pruning, state machine loop de-flattening, multi-pass branch offset calculation, AST reconstruction, and CLI flags.</td>
     </tr>
   </tbody>
 </table>

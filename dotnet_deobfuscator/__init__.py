@@ -42,6 +42,26 @@ from .unpackers.eazfuscator_vm import (
     VMOpcode,
     VMOpcodeTable,
 )
+from .unpackers.deepsea import DeepSeaUnpacker
+from .unpackers.deepsea_deflattener import (
+    ASTReconstructor,
+    CILDisassembler,
+    CILEmitter,
+    DeepSeaDeflattener,
+    OpaquePredicateEliminator,
+)
+from .unpackers.deepsea_models import (
+    ASTBlock,
+    ASTIf,
+    ASTMethod,
+    ASTNode,
+    ASTStatement,
+    ASTWhile,
+    BasicBlock,
+    CILInstruction,
+    CILOpcode,
+    ControlFlowGraph,
+)
 from .unpackers.intellilock import IntelliLockUnpacker
 from .unpackers.intellilock_models import (
     HardwareProfile,
@@ -53,7 +73,7 @@ from .unpackers.intellilock_models import (
 )
 from .unpackers.reactor import DotNetReactorUnpacker
 
-__version__ = "1.9.0"
+__version__ = "2.0.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -98,5 +118,21 @@ __all__ = [
     "LockType",
     "LicenseStatus",
     "SecurityError",
+    "DeepSeaUnpacker",
+    "DeepSeaDeflattener",
+    "CILDisassembler",
+    "CILEmitter",
+    "OpaquePredicateEliminator",
+    "ASTReconstructor",
+    "CILOpcode",
+    "CILInstruction",
+    "BasicBlock",
+    "ControlFlowGraph",
+    "ASTNode",
+    "ASTMethod",
+    "ASTBlock",
+    "ASTStatement",
+    "ASTIf",
+    "ASTWhile",
     "__version__",
 ]
