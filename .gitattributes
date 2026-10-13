@@ -1,0 +1,13 @@
+# Auto-detect text files and normalize line endings on checkout
+* text=auto eol=lf
+
+# Force binary files to prevent CRLF line ending translation
+*.bin binary
+*.exe binary
+*.dll binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
