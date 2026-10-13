@@ -13,6 +13,7 @@ from . import __version__
 from .core import DotNetPackerCore
 from .payload_verifier import PayloadVerifier
 from .pe_rebuilder import PERebuildOptions
+from .unpackers.armdot_vm import ArmDotOpcodeTable
 from .unpackers.eazfuscator_vm import VMOpcodeTable
 
 
@@ -94,6 +95,24 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--vm-table",
         help="Custom VM opcode table JSON configuration file path",
+    )
+    parser.add_argument(
+        "--devirtualize-armdot",
+        action="store_true",
+        help="De-virtualize ArmDot VM methods and reconstruct assembly",
+    )
+    parser.add_argument(
+        "--armdot-out",
+        help="Destination path for ArmDot devirtualized assembly binary",
+    )
+    parser.add_argument(
+        "--disasm-armdot",
+        action="store_true",
+        help="Disassemble ArmDot VM bytecode containers to formatted assembly",
+    )
+    parser.add_argument(
+        "--armdot-table",
+        help="Custom ArmDot VM opcode table JSON configuration file path",
     )
     parser.add_argument(
         "--demangle-babel",
@@ -296,6 +315,24 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
     else:
         lines.append("  [-] No Babel Obfuscator artifacts detected.")
 
+    armdot = report.get("armdot", {})
+    lines.append("")
+    lines.append("--- [ArmDot VM Forensics & De-virtualizer] ---")
+    if armdot.get("detected"):
+        lines.append(f"  [+] ArmDot Detected! (Confidence: {armdot.get('confidence', 'HIGH')})")
+        if armdot.get("has_virtual_machine"):
+            lines.append(f"      Virtual Machine    : YES ({armdot.get('vm_method_count', 0)} virtualized methods in {armdot.get('vm_containers_count', 0)} containers)")
+        if armdot.get("matched_markers"):
+            lines.append(f"      Matched Markers    : {', '.join(armdot['matched_markers'])}")
+        if armdot.get("containers"):
+            lines.append("      VM Containers:")
+            for c in armdot["containers"][:5]:
+                lines.append(f"        * Container @ {c['offset']} (v{c['version']}, {c['method_count']} methods, Magic: {c['magic']})")
+                for t in c.get("tokens", [])[:4]:
+                    lines.append(f"          - Method Token: {t}")
+    else:
+        lines.append("  [-] No ArmDot virtualization artifacts detected.")
+
     pe_reb = report.get("pe_rebuilder", {})
     lines.append("")
     lines.append("--- [PE Structural Health & Rebuilder Diagnostics] ---")
@@ -468,6 +505,41 @@ def main(argv: Optional[list] = None) -> int:
                 sys.stdout.write(f"    * Exported dependency graph Mermaid -> {mermaid_file}\n")
         except Exception as e:
             sys.stderr.write(f"[-] Babel demangling failed: {e}\n")
+
+    # Disassemble ArmDot VM bytecode containers if requested
+    if args.disasm_armdot:
+        try:
+            custom_tbl = None
+            if args.armdot_table:
+                with open(args.armdot_table, "r", encoding="utf-8") as f:
+                    custom_tbl = ArmDotOpcodeTable.from_dict(json.load(f))
+            disasm_res = DotNetPackerCore.disassemble_armdot_vm(args.target, custom_table=custom_tbl)
+            sys.stdout.write(f"[+] Disassembled {len(disasm_res)} ArmDot VM method bodies:\n")
+            for item in disasm_res:
+                sys.stdout.write(f"\n--- Method {item['token']} ({item['instruction_count']} VM instructions) ---\n")
+                sys.stdout.write(item["disassembly"] + "\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] ArmDot VM disassembly failed: {e}\n")
+
+    # De-virtualize ArmDot VM assembly if requested
+    if args.devirtualize_armdot:
+        try:
+            custom_tbl = None
+            if args.armdot_table:
+                with open(args.armdot_table, "r", encoding="utf-8") as f:
+                    custom_tbl = ArmDotOpcodeTable.from_dict(json.load(f))
+            dest_path = args.armdot_out or args.output or f"{args.target}.armdot_devirtualized.exe"
+            rebuilt_pe, armdot_rep = DotNetPackerCore.devirtualize_armdot(
+                args.target, output_path=dest_path, custom_table=custom_tbl
+            )
+            count = armdot_rep.get("methods_devirtualized_count", 0)
+            sys.stdout.write(
+                f"[+] Successfully de-virtualized {count} ArmDot VM methods -> {dest_path}\n"
+            )
+            for act in armdot_rep.get("actions_applied", []):
+                sys.stdout.write(f"    * {act}\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] ArmDot de-virtualization failed: {e}\n")
 
     # Dump decrypted ConfuserEx strings if requested
     if args.dump_strings:

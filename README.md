@@ -108,6 +108,10 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `--eaz-out` | Destination path for devirtualized assembly binary | None |
 | `--disasm-vm` | Disassemble Eazfuscator VM bytecode containers to formatted assembly | `False` |
 | `--vm-table` | Custom VM opcode table JSON configuration file path | None |
+| `--devirtualize-armdot` | De-virtualize ArmDot VM methods and reconstruct assembly | `False` |
+| `--armdot-out` | Destination path for ArmDot devirtualized assembly binary | None |
+| `--disasm-armdot` | Disassemble ArmDot VM bytecode containers to formatted assembly | `False` |
+| `--armdot-table` | Custom ArmDot VM opcode table JSON configuration file path | None |
 | `--demangle-babel` | Demangle Babel Obfuscator symbols and reconstruct cross-assembly dependency graph | `False` |
 | `--babel-out` | Destination path for demangled assembly binary | None |
 | `--export-depgraph` | Export inter-assembly dependency graph in JSON, Graphviz DOT, and Mermaid formats | `False` |
@@ -122,7 +126,7 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v1.7.0` |
+| `--version` | Display engine version and exit | `v1.8.0` |
 
 </details>
 
@@ -261,6 +265,21 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td>Identifies Babel signatures, carves and decompresses embedded merged satellite assemblies, and manages safe directory exports.</td>
     </tr>
     <tr>
+      <td><code>dotnet_deobfuscator/unpackers/armdot_vm.py</code></td>
+      <td><b>ArmDot VM Disassembler &amp; Stack Emulator</b></td>
+      <td>Disassembles proprietary ArmDot VM bytecodes, supports dynamic opcode table mapping, and tracks abstract evaluation stack balance.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/unpackers/armdot_rebuilder.py</code></td>
+      <td><b>ArmDot CIL Method Rebuilder</b></td>
+      <td>Translates ArmDot VM instructions into ECMA-335 CIL, resolves short/long branch relative fixups, and builds CorILMethod Tiny/Fat headers.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/unpackers/armdot.py</code></td>
+      <td><b>ArmDot Unpacker Engine</b></td>
+      <td>Scans ArmDot markers, carves embedded VM containers, decrypts LCG/XOR bytecodes, synthesizes .armdot PE sections, and extracts assemblies.</td>
+    </tr>
+    <tr>
       <td><code>dotnet_deobfuscator/pe_rebuilder.py</code></td>
       <td><b>PE Header &amp; Section Rebuilder</b></td>
       <td>Reconstructs damaged PE headers, realigns section tables, unmaps process memory dumps, and recovers CLR Cor20Header descriptors.</td>
@@ -364,6 +383,11 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>tests/test_babel_unpacker.py</code></td>
       <td><b>Babel Unpacker &amp; Demangler Test</b></td>
       <td>Validates Unicode cleaning, interface inference, getter/setter restoration, DAG topological sorting, cycle detection, DOT/Mermaid export, merged PE carving, and CLI flags.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_armdot_unpacker.py</code></td>
+      <td><b>ArmDot VM Unpacker &amp; Rebuilder Test</b></td>
+      <td>Validates VM opcode deduction, bytecode disassembly, abstract stack balance, relative branch resolution, CorILMethod Tiny/Fat emission, and PE section injection.</td>
     </tr>
   </tbody>
 </table>
