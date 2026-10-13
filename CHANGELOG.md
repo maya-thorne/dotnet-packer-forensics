@@ -5,7 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-10-13
+
+### Added
+- **Anti-Dump Process Memory PE Header Healer & Scylla Dump Normalizer (`dotnet_deobfuscator.unpackers.antidump_models`, `dotnet_deobfuscator.unpackers.antidump_healer`, `dotnet_deobfuscator.unpackers.antidump`)**:
+  - Comprehensive anti-dump detection heuristics and confidence scoring identifying erased DOS magic (`MZ`), wiped NT headers, orphaned PE signatures, stripped section tables, corrupted COM descriptors, and memory-mapped section alignments (`VirtualAddress == PointerToRawData`).
+  - ECMA-335 BSJB CLR metadata scanner (`scan_bsjb_metadata`) locating `BSJB` signatures (`0x424A5342`), parsing version strings, stream counts, and metadata boundaries across raw memory buffers.
+  - Cor20Header recovery and synthesis engine (`scan_or_synthesize_cor20_header`) restoring stripped COM descriptors in DataDirectory[14] or synthesizing valid ECMA-335 Cor20Headers (`cb=72`, `MajorRuntimeVersion=2`, `MinorRuntimeVersion=5`, MetaData RVA, ILONLY flags, EntryPointToken).
+  - CLR Import Table (IAT) reconstruction engine (`build_clr_import_table`) synthesizing standard `mscoree.dll` bootstrap jump thunks (`FF 25 [IAT RVA]`), `IMAGE_IMPORT_DESCRIPTOR`, INT, and IAT thunks to ensure full compatibility with disassemblers (ILSpy, dnSpy, de4dot) and native Windows PE loaders.
+  - Scylla and process memory dump unmapper converting virtual memory page alignments into compact, file-aligned (`0x200`) raw disk layouts, recalculating section raw pointers and `SizeOfImage`.
+  - Section table healing engine sanitizing erased or randomized section names, inferring section semantics (`CODE_AND_CLR`, `METADATA_BSJB`, `IMPORT_TABLE`, `WIN32_RESOURCES`), and synthesizing baseline `.text` sections when section tables are completely wiped.
+  - Safe directory export pipeline (`unpack_to_directory`) generating normalized PE executables (`healed_dump.exe`/`.dll`), individual section binary dumps, JSON telemetry manifests, and Scylla import reports with strict path traversal defenses (`_safe_path`).
+- **Telemetry Aggregator (`dotnet_deobfuscator.analysis_collector`)**:
+  - Modularized unified analysis dictionary construction (`build_analysis_report`), ensuring `core.py` remains lean and well within standard modularity thresholds (619 lines).
+- **CLI & Core Orchestrator Integration**:
+  - Added `--heal-dump` and `--heal-out` flags to detect anti-dump corruptions, heal process memory dumps, and write normalized PE binaries.
+  - Added `--scylla-mode` flag enforcing Scylla-compatible memory dump unmapping and CLR import reconstruction.
+  - Added `--anti-dump-dir` for full artifact and carved section directory exports.
+  - Integrated anti-dump telemetry into `DotNetPackerCore.analyze_file`, `DotNetPackerCore.heal_anti_dump`, `DotNetPackerCore.detect_anti_dump`, and `DotNetPackerCore.unpack_anti_dump_dir`.
+- **Comprehensive Anti-Dump Test Suite (`tests/test_antidump_healer.py`)**:
+  - 16 unit and integration test cases covering clean PE detection, erased DOS/NT header repairs, virtual memory dump unmapping, stripped section name sanitization, ConfuserEx anti-dump runtime detection, BSJB metadata extraction, CLR import table synthesis, Cor20Header synthesis, scratchpad buffer zeroizing, path traversal prevention, and CLI execution (expanding the total test suite to 229 tests).
+
 ## [2.1.0] - 2026-10-13
+
 
 ### Added
 - **CLI Metadata Anti-Tamper Heuristics & In-Memory JIT Dumper Engine (`dotnet_deobfuscator.unpackers.antitamper_models`, `dotnet_deobfuscator.unpackers.antitamper_jit`, `dotnet_deobfuscator.unpackers.antitamper`)**:

@@ -52,6 +52,20 @@ from .deepsea_models import (
     ControlFlowGraph,
     FlowControl,
 )
+from .antitamper import AntiTamperUnpacker
+from .antitamper_jit import (
+    AntiTamperDecrypter,
+    CorILMethodParser,
+    JITDumperInterface,
+)
+from .antitamper_models import (
+    AntiTamperDetectionResult,
+    AntiTamperSectionInfo,
+    AntiTamperType,
+    CorILMethodFormat,
+    CorILMethodHeader,
+    JITMethodRecord,
+)
 from .intellilock import IntelliLockUnpacker
 from .intellilock_models import (
     HardwareProfile,
@@ -62,6 +76,19 @@ from .intellilock_models import (
     VirtualLicense,
 )
 from .reactor import DotNetReactorUnpacker
+
+from .antidump import AntiDumpUnpacker
+from .antidump_healer import AntiDumpHealer
+from .antidump_models import (
+    AntiDumpHealOptions,
+    AntiDumpHealResult,
+    AntiDumpTechnique,
+    AntiDumpTelemetry,
+    DumpSource,
+    HealedSectionInfo,
+    SectionType,
+    SynthesizedImportInfo,
+)
 
 __all__ = [
     "CosturaUnpacker",
@@ -109,4 +136,25 @@ __all__ = [
     "ASTStatement",
     "ASTIf",
     "ASTWhile",
+    "AntiTamperUnpacker",
+    "AntiTamperDecrypter",
+    "CorILMethodParser",
+    "JITDumperInterface",
+    "AntiTamperType",
+    "CorILMethodFormat",
+    "CorILMethodHeader",
+    "JITMethodRecord",
+    "AntiTamperDetectionResult",
+    "AntiTamperSectionInfo",
+    "AntiDumpUnpacker",
+    "AntiDumpHealer",
+    "AntiDumpHealOptions",
+    "AntiDumpHealResult",
+    "AntiDumpTechnique",
+    "AntiDumpTelemetry",
+    "DumpSource",
+    "HealedSectionInfo",
+    "SectionType",
+    "SynthesizedImportInfo",
 ]
+

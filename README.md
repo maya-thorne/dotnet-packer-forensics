@@ -129,6 +129,10 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `--anti-tamper-out` | Destination path for anti-tamper restored assembly binary | None |
 | `--dump-jit` | Path to in-memory JIT dump file (JSON or binary JITD stream) | None |
 | `--anti-tamper-dir` | Directory path to extract restored assembly and CIL method payload binaries | None |
+| `--heal-dump` | Heal anti-dump memory corruptions, restore PE headers, and unmap memory dump | `False` |
+| `--heal-out` | Destination path for healed standalone PE binary | None |
+| `--scylla-mode` | Enforce Scylla-compatible memory dump unmapping and CLR import reconstruction | `False` |
+| `--anti-dump-dir` | Directory path to export healed binary, carved sections, and telemetry manifest | None |
 | `--rebuild` | Reconstruct damaged PE headers, realign sections, and repair standalone binary | `False` |
 | `--rebuild-out` | Output destination path for rebuilt PE binary | None |
 | `--unmap-dump` | Force process memory dump unmapping (realign RVA mapped sections to disk raw offsets) | `False` |
@@ -139,7 +143,8 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v2.1.0` |
+| `--version` | Display engine version and exit | `v2.2.0` |
+
 
 </details>
 
@@ -333,10 +338,31 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td>Detects corrupted metadata streams (#~/#-), restores method bodies, synthesizes .antitamper sections, and manages safe directory exports.</td>
     </tr>
     <tr>
+      <td><code>dotnet_deobfuscator/unpackers/antidump_models.py</code></td>
+      <td><b>Anti-Dump Models &amp; Enums</b></td>
+      <td>Models anti-dump techniques, dump sources, normalized sections, and synthesized CLR bootstrap import descriptors.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/unpackers/antidump_healer.py</code></td>
+      <td><b>Anti-Dump PE Header Healer</b></td>
+      <td>Heals erased DOS/PE headers, unmaps Scylla memory dumps, scans BSJB metadata, recovers Cor20Headers, and reconstructs CLR IAT imports.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/unpackers/antidump.py</code></td>
+      <td><b>Anti-Dump Unpacker Engine</b></td>
+      <td>Detects anti-dump corruptions, normalizes memory dumps, and manages safe directory exports with path traversal defenses.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/analysis_collector.py</code></td>
+      <td><b>Forensic Telemetry Aggregator</b></td>
+      <td>Aggregates forensic telemetry into unified analysis report dictionaries while maintaining modular code boundaries.</td>
+    </tr>
+    <tr>
       <td><code>dotnet_deobfuscator/report_formatter.py</code></td>
       <td><b>Forensic Telemetry Formatter</b></td>
       <td>Formats human-readable multi-protector diagnostic text reports with strict separation of concerns and modular limits.</td>
     </tr>
+
     <tr>
       <td><code>dotnet_deobfuscator/pe_rebuilder.py</code></td>
       <td><b>PE Header &amp; Section Rebuilder</b></td>

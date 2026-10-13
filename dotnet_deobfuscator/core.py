@@ -8,6 +8,7 @@ import struct
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from .analysis_collector import build_analysis_report
 from .dotnet_analyzer import DotNetAnalyzer
 from .payload_verifier import (
     PayloadVerificationResult,
@@ -16,6 +17,8 @@ from .payload_verifier import (
 from .pe_overlay import PEOverlayParser
 from .pe_rebuilder import PERebuilder, PERebuildOptions, PERebuildReport
 from .signatures import ProtectorSignatures
+from .unpackers.antidump import AntiDumpUnpacker
+from .unpackers.antidump_models import AntiDumpHealOptions, AntiDumpHealResult
 from .unpackers.armdot import (
     ArmDotOpcodeTable,
     ArmDotUnpacker,
@@ -100,174 +103,46 @@ class DotNetPackerCore:
         # 12. CLI Metadata Anti-Tamper & JIT Dumper Forensics
         antitamper_detect = AntiTamperUnpacker.detect(data)
 
-        # 13. PE Structural Health & Section Rebuilder Diagnostics
+        # 13. Anti-Dump Memory PE Header & Scylla Dump Forensics
+        antidump_detect = AntiDumpUnpacker.detect(data)
+
+        # 14. PE Structural Health & Section Rebuilder Diagnostics
         pe_diag = PERebuilder.detect_anomalies(data)
 
-        # 14. Cryptographic Hashes & Integrity Baselines
+        # 15. Cryptographic Hashes & Integrity Baselines
         hashes = PayloadVerifier.compute_hashes(data)
 
-        return {
-            "file": file_path,
-            "size_bytes": file_size,
-            "elapsed_ms": elapsed_ms,
-            "sha256": hashes["sha256"],
-            "hashes": hashes,
-            "is_pe": assembly_info["is_pe"],
-            "is_dotnet": assembly_info["is_dotnet"],
-            "entropy": assembly_info["entropy"],
-            "sections": assembly_info["sections"],
-            "metadata_streams": assembly_info["metadata_streams"],
-            "suspicious_indicators": assembly_info["suspicious_indicators"],
-            "detected_protectors": detected_protectors,
-            "pe_rebuilder": {
-                "is_valid_pe": assembly_info["is_pe"],
-                "is_memory_dump": pe_diag["is_memory_dump"],
-                "anomalies_detected": pe_diag["anomalies"],
-                "anomalies_count": len(pe_diag["anomalies"]),
-                "repair_recommended": len(pe_diag["anomalies"]) > 0,
-            },
-            "overlay": {
-                "has_overlay": len(overlay_bytes) > 0,
-                "overlay_size_bytes": len(overlay_bytes),
-                "pe_virtual_size": pe_size,
-            },
-            "unpacked_payload": {
-                "success": xor_result is not None,
-                "details": (
-                    {
-                        "sentinel_offset": xor_result["sentinel_offset"],
-                        "dynamic_key": xor_result["dynamic_key_recovered"],
-                        "payload_size": len(xor_result["decrypted_payload_bytes"]),
-                        "is_valid_pe": xor_result["is_valid_pe"],
-                    }
-                    if xor_result
-                    else None
-                ),
-            },
-            "costura": {
-                "detected": costura_detect["is_costura"],
-                "confidence": costura_detect["confidence"],
-                "payloads_count": len(costura_payloads),
-                "payloads": [
-                    {
-                        "original_name": p["original_name"],
-                        "output_filename": p["output_filename"],
-                        "compressed_size_bytes": p["compressed_size_bytes"],
-                        "size_bytes": p["size_bytes"],
-                        "sha256": p["sha256"],
-                        "is_pe": p["is_pe"],
-                        "is_pdb": p["is_pdb"],
-                        "entropy": p["entropy"],
-                    }
-                    for p in costura_payloads
-                ],
-            },
-            "confuserex": {
-                "detected": confuser_detect["is_confuserex"],
-                "confidence": confuser_detect["confidence"],
-                "detected_protections": confuser_detect["detected_protections"],
-                "markers_found": confuser_detect["markers_found"],
-                "obfuscated_names_count": confuser_detect["obfuscated_names_count"],
-                "has_antidump": confuser_detect["has_antidump"],
-                "has_antitamper": confuser_detect["has_antitamper"],
-                "has_constants": confuser_detect["has_constants"],
-                "has_resources": confuser_detect["has_resources"],
-                "decrypted_strings_count": len(confuser_strings_list),
-                "decrypted_strings": confuser_strings_list[:100],
-                "resources_count": len(confuser_payloads),
-                "resources": [
-                    {
-                        "original_name": r["original_name"],
-                        "output_filename": r["output_filename"],
-                        "size_bytes": r["size_bytes"],
-                        "sha256": r["sha256"],
-                        "is_pe": r["is_pe"],
-                        "resource_type": r.get("resource_type", "Binary Resource"),
-                        "entropy": r["entropy"],
-                    }
-                    for r in confuser_payloads
-                ],
-            },
-            "reactor": {
-                "detected": reactor_detect["is_reactor"],
-                "confidence": reactor_detect["confidence"],
-                "is_native_envelope": reactor_detect["is_native_envelope"],
-                "has_necrobit": reactor_detect["has_necrobit"],
-                "markers_found": reactor_detect["markers_found"],
-                "methods_count": len(reactor_methods),
-                "restored_methods": [
-                    {"token": m["token"], "header_format": m["header_format"], "code_size": m["code_size"], "is_valid_cil": m["is_valid_cil"]}
-                    for m in reactor_methods.values()
-                ][:50],
-                "payloads_count": len(reactor_payloads),
-                "payloads": [
-                    {"output_filename": p["output_filename"], "size_bytes": p["size_bytes"], "sha256": p["sha256"], "artifact_type": p["artifact_type"]}
-                    for p in reactor_payloads
-                ],
-            },
-            "eazfuscator": {
-                "detected": eaz_detect["is_eazfuscator"],
-                "confidence": eaz_detect["confidence"],
-                "has_virtual_machine": eaz_detect["has_virtual_machine"],
-                "vm_method_count": eaz_detect["vm_method_count"],
-                "vm_containers_count": eaz_detect["vm_containers_count"],
-                "matched_markers": eaz_detect["matched_markers"],
-                "containers": [
-                    {"offset": f"0x{c['offset']:X}", "magic": c["magic"], "version": c["version"], "method_count": c["method_count"], "tokens": [m["token_hex"] for m in c.get("methods", [])]}
-                    for c in eaz_containers
-                ],
-            },
-            "babel": {
-                "detected": babel_detect["is_babel"],
-                "confidence": babel_detect["confidence"],
-                "has_merged_assemblies": babel_detect["has_merged_assemblies"],
-                "merged_assemblies_count": babel_detect["merged_assemblies_count"],
-                "has_embedded_map": babel_detect["has_embedded_map"],
-                "obfuscated_symbols_count": babel_detect["obfuscated_symbols_count"],
-                "markers_found": babel_detect["markers_found"],
-                "merged_assemblies": [
-                    {"original_name": m["original_name"], "output_filename": m["output_filename"], "size_bytes": m["size_bytes"], "sha256": m["sha256"], "is_pe": m["is_pe"], "compression": m["compression"], "entropy": m["entropy"]}
-                    for m in babel_merged
-                ],
-            },
-            "armdot": {
-                "detected": armdot_detect["is_armdot"],
-                "confidence": armdot_detect["confidence"],
-                "has_virtual_machine": armdot_detect["has_virtual_machine"],
-                "vm_method_count": armdot_detect["vm_method_count"],
-                "vm_containers_count": armdot_detect["vm_containers_count"],
-                "matched_markers": armdot_detect["matched_markers"],
-                "containers": [
-                    {"offset": f"0x{c['offset']:X}", "magic": c["magic"], "version": c["version"], "method_count": c["method_count"], "tokens": [m["token_hex"] for m in c.get("methods", [])]}
-                    for c in armdot_containers
-                ],
-            },
-            "intellilock": {
-                "detected": intellilock_detect["is_intellilock"],
-                "confidence": intellilock_detect["confidence"],
-                "is_enveloped": intellilock_detect["is_enveloped"],
-                "has_hardware_lock": intellilock_detect["has_hardware_lock"],
-                "has_trial_expiration": intellilock_detect["has_trial_expiration"],
-                "markers_found": intellilock_detect["markers_found"],
-                "sections_matched": intellilock_detect["sections_matched"],
-            },
-            "deepsea": {
-                "detected": deepsea_detect["is_deepsea"],
-                "confidence": deepsea_detect["confidence"],
-                "matched_markers": deepsea_detect["matched_markers"],
-                "switch_density": deepsea_detect["switch_density"],
-                "state_var_density": deepsea_detect["state_var_density"],
-            },
-            "anti_tamper": {
-                "detected": antitamper_detect["is_tampered"],
-                "confidence": antitamper_detect["confidence"],
-                "detected_types": antitamper_detect["detected_types"],
-                "encrypted_methods_count": antitamper_detect["encrypted_methods_count"],
-                "corrupted_streams": antitamper_detect["corrupted_streams"],
-                "jit_signatures": antitamper_detect["jit_signatures"],
-                "anti_tamper_sections": antitamper_detect["anti_tamper_sections"],
-            },
-        }
+        return build_analysis_report(
+            file_path=file_path,
+            file_size=file_size,
+            elapsed_ms=elapsed_ms,
+            hashes=hashes,
+            assembly_info=assembly_info,
+            detected_protectors=detected_protectors,
+            pe_diag=pe_diag,
+            overlay_bytes=overlay_bytes,
+            pe_size=pe_size,
+            xor_result=xor_result,
+            costura_detect=costura_detect,
+            costura_payloads=costura_payloads,
+            confuser_detect=confuser_detect,
+            confuser_payloads=confuser_payloads,
+            confuser_strings_list=confuser_strings_list,
+            reactor_detect=reactor_detect,
+            reactor_payloads=reactor_payloads,
+            reactor_methods=reactor_methods,
+            eaz_detect=eaz_detect,
+            eaz_containers=eaz_containers,
+            babel_detect=babel_detect,
+            babel_merged=babel_merged,
+            armdot_detect=armdot_detect,
+            armdot_containers=armdot_containers,
+            intellilock_detect=intellilock_detect,
+            deepsea_detect=deepsea_detect,
+            antitamper_detect=antitamper_detect,
+            antidump_detect=antidump_detect,
+        )
+
 
     @classmethod
     def rebuild_pe(
@@ -361,11 +236,20 @@ class DotNetPackerCore:
                 f.write(rebuilt_pe)
             return True
 
+        # Check if AntiDump memory dump needs healing
+        antidump_detect = AntiDumpUnpacker.detect(data)
+        if antidump_detect["is_anti_dump"]:
+            healed_pe, rep = AntiDumpUnpacker.heal_dump(data)
+            if rep.get("is_healed"):
+                with open(output_path, "wb") as f:
+                    f.write(healed_pe)
+                return True
+
         return False
 
     @classmethod
     def unpack_to_dir(cls, input_path: str, output_dir: str) -> List[Dict[str, any]]:
-        """Extracts all embedded Costura, ConfuserEx, .NET Reactor, Eazfuscator, Babel, ArmDot, and DeepSea assemblies into target directory."""
+        """Extracts all embedded Costura, ConfuserEx, .NET Reactor, Eazfuscator, Babel, ArmDot, DeepSea, AntiTamper, and AntiDump assemblies into target directory."""
         with open(input_path, "rb") as f:
             data = f.read()
         written = []
@@ -379,7 +263,10 @@ class DotNetPackerCore:
             DeepSeaUnpacker.unpack_to_directory(data, output_dir)
         if AntiTamperUnpacker.detect(data)["is_tampered"]:
             AntiTamperUnpacker.unpack_to_directory(data, output_dir)
+        if AntiDumpUnpacker.detect(data)["is_anti_dump"]:
+            AntiDumpUnpacker.unpack_to_directory(data, output_dir)
         return written
+
 
     @classmethod
     def demangle_babel(
@@ -692,5 +579,41 @@ class DotNetPackerCore:
             return AntiTamperUnpacker.unpack_to_directory(
                 f.read(), output_dir=output_dir, jit_dump_file=jit_dump_path, master_seed=master_seed
             )
+
+    @classmethod
+    def heal_anti_dump(
+        cls,
+        input_path: str,
+        output_path: Optional[str] = None,
+        options: Optional[AntiDumpHealOptions] = None,
+    ) -> Tuple[bytes, Dict[str, Any]]:
+        """Heals anti-dump memory corruptions, reconstructing PE headers and CLR metadata."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        healed_pe, rep = AntiDumpUnpacker.heal_dump(data, options=options)
+        if output_path and rep.get("is_healed"):
+            with open(output_path, "wb") as f:
+                f.write(healed_pe)
+        return healed_pe, rep
+
+    @classmethod
+    def detect_anti_dump(cls, input_path: str) -> Dict[str, Any]:
+        """Detects anti-dump memory corruptions and dump layout characteristics."""
+        with open(input_path, "rb") as f:
+            return AntiDumpUnpacker.detect(f.read())
+
+    @classmethod
+    def unpack_anti_dump_dir(
+        cls,
+        input_path: str,
+        output_dir: str,
+        options: Optional[AntiDumpHealOptions] = None,
+    ) -> Dict[str, Any]:
+        """Heals dump and exports normalized binary, carved sections, and telemetry to directory."""
+        with open(input_path, "rb") as f:
+            return AntiDumpUnpacker.unpack_to_directory(
+                f.read(), output_dir=output_dir, options=options
+            )
+
 
 

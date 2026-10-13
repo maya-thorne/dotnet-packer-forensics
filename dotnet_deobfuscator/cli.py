@@ -193,7 +193,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory path to export unpacked methods, CIL bytecodes, and manifest",
     )
     parser.add_argument(
+        "--heal-dump",
+        action="store_true",
+        help="Heal anti-dump memory corruptions, restore PE headers, and unmap memory dump",
+    )
+    parser.add_argument(
+        "--heal-out",
+        help="Destination path for healed standalone PE binary",
+    )
+    parser.add_argument(
+        "--scylla-mode",
+        action="store_true",
+        help="Enforce Scylla-compatible memory dump unmapping and CLR import reconstruction",
+    )
+    parser.add_argument(
+        "--anti-dump-dir",
+        help="Directory path to export healed binary, carved sections, and telemetry manifest",
+    )
+    parser.add_argument(
         "--verify",
+
         action="store_true",
         help="Execute forensic payload verification & PE/CLR structural integrity audit",
     )
@@ -478,6 +497,35 @@ def main(argv: Optional[list] = None) -> int:
             )
         except Exception as e:
             sys.stderr.write(f"[-] Anti-Tamper directory export failed: {e}\n")
+
+    # Heal Anti-Dump memory corruptions if requested
+    if args.heal_dump or args.heal_out or args.scylla_mode:
+        try:
+            dest_path = args.heal_out or args.output or f"{args.target}.healed.exe"
+            healed_pe, hd_rep = DotNetPackerCore.heal_anti_dump(args.target, output_path=dest_path)
+            sys.stdout.write(
+                f"[+] Successfully healed process dump -> {dest_path} ({len(healed_pe):,} bytes)\n"
+            )
+            telem = hd_rep.get("telemetry", {})
+            sys.stdout.write(f"    * Dump Source       : {telem.get('dump_source', 'UNKNOWN')}\n")
+            sys.stdout.write(f"    * Sections Healed   : {hd_rep.get('sections_count', len(hd_rep.get('sections', [])))}\n")
+            if telem.get("bsjb_metadata_found"):
+                sys.stdout.write(f"    * CLR Metadata BSJB : Found at {telem.get('bsjb_rva')}\n")
+            if telem.get("iat_reconstructed"):
+                sys.stdout.write("    * CLR Import IAT    : Synthesized mscoree.dll bootstrap\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] Anti-Dump healing failed: {e}\n")
+
+    # Anti-Dump directory export
+    if args.anti_dump_dir:
+        try:
+            res = DotNetPackerCore.unpack_anti_dump_dir(args.target, output_dir=args.anti_dump_dir)
+            sys.stdout.write(
+                f"[+] Successfully exported healed dump & sections -> {res.get('output_dir')}\n"
+            )
+        except Exception as e:
+            sys.stderr.write(f"[-] Anti-Dump directory export failed: {e}\n")
+
 
 
     # Dump decrypted ConfuserEx strings if requested
