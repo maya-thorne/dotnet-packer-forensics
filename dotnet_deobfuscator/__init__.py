@@ -18,8 +18,9 @@ from .pe_rebuilder import PERebuilder, PERebuildOptions, PERebuildReport
 from .signatures import ProtectorSignatures
 from .unpackers.confuserex import ConfuserExUnpacker
 from .unpackers.costura import CosturaUnpacker
+from .unpackers.reactor import DotNetReactorUnpacker
 
-__version__ = "1.4.0"
+__version__ = "1.5.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -38,5 +39,6 @@ __all__ = [
     "ProtectorSignatures",
     "CosturaUnpacker",
     "ConfuserExUnpacker",
+    "DotNetReactorUnpacker",
     "__version__",
 ]

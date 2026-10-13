@@ -53,6 +53,30 @@ def build_parser() -> argparse.ArgumentParser:
         help="Force process memory dump unmapping (realign RVA mapped sections to disk raw offsets)",
     )
     parser.add_argument(
+        "--strip-envelope",
+        action="store_true",
+        help="Strip native wrapper envelope and carve encapsulated managed .NET assembly",
+    )
+    parser.add_argument(
+        "--envelope-out",
+        help="Destination path for de-enveloped managed assembly binary",
+    )
+    parser.add_argument(
+        "--restore-necrobit",
+        action="store_true",
+        help="Decrypt NecroBit CIL method bodies and reconstruct deobfuscated assembly",
+    )
+    parser.add_argument(
+        "--necrobit-out",
+        help="Destination path for NecroBit restored assembly binary",
+    )
+    parser.add_argument(
+        "--necrobit-seed",
+        type=lambda x: int(x, 0),
+        default=0x14725836,
+        help="Decryption seed integer for NecroBit PRNG stream cipher (default: 0x14725836)",
+    )
+    parser.add_argument(
         "--verify",
         action="store_true",
         help="Execute forensic payload verification & PE/CLR structural integrity audit",
@@ -170,6 +194,32 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
     else:
         lines.append("  [-] No ConfuserEx protection artifacts detected.")
 
+    reactor = report.get("reactor", {})
+    lines.append("")
+    lines.append("--- [.NET Reactor & NecroBit Forensics] ---")
+    if reactor.get("detected"):
+        lines.append(f"  [+] .NET Reactor Detected! (Confidence: {reactor.get('confidence', 'HIGH')})")
+        if reactor.get("is_native_envelope"):
+            lines.append("      Wrapper Envelope   : Native Win32/x64 Stub Envelope Identified")
+        if reactor.get("has_necrobit"):
+            lines.append(f"      NecroBit Protected : YES ({reactor.get('methods_count', 0)} encrypted methods)")
+        if reactor.get("markers_found"):
+            lines.append(f"      Matched Markers    : {', '.join(reactor['markers_found'])}")
+        if reactor.get("restored_methods"):
+            lines.append("      Decrypted CIL Stubs:")
+            for m in reactor["restored_methods"][:8]:
+                valid_str = "Valid CIL" if m["is_valid_cil"] else "Raw Bytecode"
+                lines.append(f"        * Token {m['token']} ({m['header_format']}, {m['code_size']} bytes, {valid_str})")
+            if len(reactor["restored_methods"]) > 8:
+                lines.append(f"        * ... ({len(reactor['restored_methods']) - 8} more methods)")
+        if reactor.get("payloads"):
+            lines.append(f"      Carved Artifacts   : {len(reactor['payloads'])}")
+            for p in reactor["payloads"]:
+                lines.append(f"      -> {p['output_filename']} ({p['size_bytes']:,} bytes, {p['artifact_type']})")
+                lines.append(f"         SHA-256 : {p['sha256']}")
+    else:
+        lines.append("  [-] No .NET Reactor protection artifacts detected.")
+
     pe_reb = report.get("pe_rebuilder", {})
     lines.append("")
     lines.append("--- [PE Structural Health & Rebuilder Diagnostics] ---")
@@ -251,6 +301,36 @@ def main(argv: Optional[list] = None) -> int:
                 sys.stdout.write(f"    * {act}\n")
         except Exception as e:
             sys.stderr.write(f"[-] Rebuild failed: {e}\n")
+
+    # Strip native wrapper envelope if requested
+    if args.strip_envelope:
+        try:
+            dest_path = args.envelope_out or args.output or f"{args.target}.de_enveloped.dll"
+            success = DotNetPackerCore.strip_reactor_envelope(args.target, dest_path)
+            if success:
+                sys.stdout.write(
+                    f"[+] Successfully stripped native envelope -> {dest_path}\n"
+                )
+            else:
+                sys.stderr.write("[-] No native envelope or valid embedded managed PE found.\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] Envelope stripping failed: {e}\n")
+
+    # Restore NecroBit encrypted CIL method bodies if requested
+    if args.restore_necrobit:
+        try:
+            dest_path = args.necrobit_out or args.output or f"{args.target}.necrobit_restored.exe"
+            necro_rep = DotNetPackerCore.restore_necrobit(
+                args.target, dest_path, seed=args.necrobit_seed
+            )
+            count = necro_rep.get("methods_restored_count", 0)
+            sys.stdout.write(
+                f"[+] Successfully restored {count} NecroBit CIL methods -> {dest_path}\n"
+            )
+            for act in necro_rep.get("actions_applied", []):
+                sys.stdout.write(f"    * {act}\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] NecroBit restoration failed: {e}\n")
 
     # Dump decrypted ConfuserEx strings if requested
     if args.dump_strings:

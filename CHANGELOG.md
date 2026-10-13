@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-10-13
+
+### Added
+- **.NET Reactor NecroBit & Native Stub Envelope Unpacker (`dotnet_deobfuscator.unpackers.reactor`)**:
+  - Full static marker detection and confidence scoring for .NET Reactor, Eziriz runtime stubs, and NecroBit method replacement artifacts.
+  - Native stub envelope stripper: identifies Win32/x64 native wrapper executables, carves encapsulated managed .NET PE assemblies from sections, resources, or overlay, and handles compressed (Deflate/Zlib/Gzip) or single-byte XOR protected envelopes.
+  - NecroBit CIL method body extraction and decryption engine: parses encrypted method containers, inverts token-keyed PRNG stream ciphers, and handles token salt key schedules.
+  - ECMA-335 CorILMethod header parser and validator: parses and verifies both `CorILMethod_TinyFormat` (1-byte header, <=63 byte bytecode) and `CorILMethod_FatFormat` (12-byte header, max stack, code size, local variable signature tokens).
+  - CIL opcode validator ensuring recovered bytecodes begin with valid ECMA-335 instructions (`nop`, `ldarg`, `ldloc`, `call`, `newobj`, `ret`, etc.).
+  - Assembly reconstruction pipeline: synthesizes a restored executable with injected CIL method bodies in a newly aligned `.necro` PE section, increments section counts, and realigns `SizeOfImage`.
+  - Directory unpacking engine (`unpack_to_directory`) with path traversal defenses, decompression bomb protection (256 MB ceiling), and Zeroize memory buffer wiping.
+- **CLI & Core Orchestrator Integration**:
+  - Added `--strip-envelope` and `--envelope-out` to carve managed assemblies from native stub envelopes.
+  - Added `--restore-necrobit` and `--necrobit-out` to decrypt and inject CIL method bodies directly.
+  - Added `--necrobit-seed` to configure custom decryption seeds for PRNG stream ciphers (default: `0x14725836`).
+  - Integrated .NET Reactor telemetry and method counts into `DotNetPackerCore.analyze_file` and CLI output.
+  - Added `DotNetPackerCore.strip_reactor_envelope` and `DotNetPackerCore.restore_necrobit` high-level APIs.
+- **Comprehensive .NET Reactor Test Suite (`tests/test_reactor_unpacker.py`)**:
+  - 14 new test cases validating marker detection, Tiny and Fat method header parsing, opcode validation, NecroBit container decryption, native envelope carving (uncompressed and XOR-encoded), PE reconstruction, directory extraction security, and CLI flags.
+
 ## [1.4.0] - 2026-10-13
 
 ### Added

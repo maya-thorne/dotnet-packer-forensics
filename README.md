@@ -99,6 +99,11 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `-o, --output` | Output file path or directory for extracted payload | None |
 | `-d, --unpack-dir` | Directory path to extract all embedded Costura & ConfuserEx assemblies | None |
 | `--dump-strings` | Extract and dump decrypted ConfuserEx constants and literal strings | `False` |
+| `--strip-envelope` | Strip native wrapper envelope and carve encapsulated managed .NET assembly | `False` |
+| `--envelope-out` | Destination path for de-enveloped managed assembly binary | None |
+| `--restore-necrobit` | Decrypt NecroBit CIL method bodies and reconstruct deobfuscated assembly | `False` |
+| `--necrobit-out` | Destination path for NecroBit restored assembly binary | None |
+| `--necrobit-seed` | Decryption seed integer for NecroBit PRNG stream cipher | `0x14725836` |
 | `--rebuild` | Reconstruct damaged PE headers, realign sections, and repair standalone binary | `False` |
 | `--rebuild-out` | Output destination path for rebuilt PE binary | None |
 | `--unmap-dump` | Force process memory dump unmapping (realign RVA mapped sections to disk raw offsets) | `False` |
@@ -109,7 +114,7 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v1.4.0` |
+| `--version` | Display engine version and exit | `v1.5.0` |
 
 </details>
 
@@ -218,6 +223,11 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td>Decodes string constants (LCG/XorShift PRNG stream ciphers), unpacks encrypted resource containers, and handles CLI resource catalogs.</td>
     </tr>
     <tr>
+      <td><code>dotnet_deobfuscator/unpackers/reactor.py</code></td>
+      <td><b>.NET Reactor Unpacker Engine</b></td>
+      <td>Strips native wrapper envelopes, decrypts NecroBit token-keyed CIL method bodies, restores Tiny/Fat headers, and synthesizes .necro sections.</td>
+    </tr>
+    <tr>
       <td><code>dotnet_deobfuscator/pe_rebuilder.py</code></td>
       <td><b>PE Header &amp; Section Rebuilder</b></td>
       <td>Reconstructs damaged PE headers, realigns section tables, unmaps process memory dumps, and recovers CLR Cor20Header descriptors.</td>
@@ -306,6 +316,11 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>tests/test_payload_verifier.py</code></td>
       <td><b>Payload Verifier Test Harness</b></td>
       <td>Validates bitwise divergence pinpointing, cryptographic hashes (SHA-256/SHA-1/MD5), PE/CLR section structure verification, directory batch auditing, and CLI --verify flags.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_reactor_unpacker.py</code></td>
+      <td><b>.NET Reactor Unpacker Test</b></td>
+      <td>Validates native stub envelope carving, XOR/compressed stream de-enveloping, NecroBit token decryption, CorILMethod parsing, and .necro section reconstruction.</td>
     </tr>
   </tbody>
 </table>

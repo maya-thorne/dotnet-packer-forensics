@@ -18,6 +18,7 @@ from .pe_rebuilder import PERebuilder, PERebuildOptions, PERebuildReport
 from .signatures import ProtectorSignatures
 from .unpackers.confuserex import ConfuserExUnpacker
 from .unpackers.costura import CosturaUnpacker
+from .unpackers.reactor import DotNetReactorUnpacker
 
 
 class DotNetPackerCore:
@@ -77,10 +78,15 @@ class DotNetPackerCore:
                 confuser_strings_list = dec_res.get("strings", [])
             confuser_strings_list = list(dict.fromkeys(confuser_strings_list))
 
-        # 6. PE Structural Health & Section Rebuilder Diagnostics
+        # 6. .NET Reactor & NecroBit / Native Stub Envelope Forensics
+        reactor_detect = DotNetReactorUnpacker.detect(data)
+        reactor_payloads = DotNetReactorUnpacker.unpack(data)
+        reactor_methods = DotNetReactorUnpacker.extract_necrobit_methods(data)
+
+        # 7. PE Structural Health & Section Rebuilder Diagnostics
         pe_diag = PERebuilder.detect_anomalies(data)
 
-        # 7. Cryptographic Hashes & Integrity Baselines
+        # 8. Cryptographic Hashes & Integrity Baselines
         hashes = PayloadVerifier.compute_hashes(data)
 
         return {
@@ -165,6 +171,33 @@ class DotNetPackerCore:
                     for r in confuser_payloads
                 ],
             },
+            "reactor": {
+                "detected": reactor_detect["is_reactor"],
+                "confidence": reactor_detect["confidence"],
+                "is_native_envelope": reactor_detect["is_native_envelope"],
+                "has_necrobit": reactor_detect["has_necrobit"],
+                "markers_found": reactor_detect["markers_found"],
+                "methods_count": len(reactor_methods),
+                "restored_methods": [
+                    {
+                        "token": m["token"],
+                        "header_format": m["header_format"],
+                        "code_size": m["code_size"],
+                        "is_valid_cil": m["is_valid_cil"],
+                    }
+                    for m in reactor_methods.values()
+                ][:50],
+                "payloads_count": len(reactor_payloads),
+                "payloads": [
+                    {
+                        "output_filename": p["output_filename"],
+                        "size_bytes": p["size_bytes"],
+                        "sha256": p["sha256"],
+                        "artifact_type": p["artifact_type"],
+                    }
+                    for p in reactor_payloads
+                ],
+            },
         }
 
     @classmethod
@@ -219,17 +252,50 @@ class DotNetPackerCore:
                 f.write(confuser_payloads[0]["payload_bytes"])
             return True
 
+        # Check if single .NET Reactor payload exists
+        reactor_payloads = DotNetReactorUnpacker.unpack(data)
+        if len(reactor_payloads) == 1:
+            with open(output_path, "wb") as f:
+                f.write(reactor_payloads[0]["payload_bytes"])
+            return True
+
         return False
 
     @classmethod
     def unpack_to_dir(cls, input_path: str, output_dir: str) -> List[Dict[str, any]]:
-        """Extracts all embedded Costura and ConfuserEx assemblies into target directory."""
+        """Extracts all embedded Costura, ConfuserEx, and .NET Reactor assemblies into target directory."""
         with open(input_path, "rb") as f:
             data = f.read()
         written = []
         written.extend(CosturaUnpacker.unpack_to_directory(data, output_dir))
         written.extend(ConfuserExUnpacker.unpack_to_directory(data, output_dir))
+        written.extend(DotNetReactorUnpacker.unpack_to_directory(data, output_dir))
         return written
+
+    @classmethod
+    def strip_reactor_envelope(cls, input_path: str, output_path: str) -> bool:
+        """Strips native wrapper envelope and writes carved managed .NET assembly to file."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        stripped_pe, rep = DotNetReactorUnpacker.strip_native_envelope(data)
+        if stripped_pe and rep.get("is_valid_managed_pe"):
+            with open(output_path, "wb") as f:
+                f.write(stripped_pe)
+            return True
+        return False
+
+    @classmethod
+    def restore_necrobit(
+        cls, input_path: str, output_path: str, seed: int = 0x14725836
+    ) -> Dict[str, any]:
+        """Restores encrypted NecroBit CIL method bodies and writes patched assembly to file."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        restored_pe, rep = DotNetReactorUnpacker.restore_necrobit_assembly(data, seed=seed)
+        if rep.get("success") or rep.get("methods_restored_count", 0) > 0:
+            with open(output_path, "wb") as f:
+                f.write(restored_pe)
+        return rep
 
     @classmethod
     def dump_strings(cls, input_path: str) -> List[str]:
