@@ -156,6 +156,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="Destination file path for generated synthetic license (.lic)",
     )
     parser.add_argument(
+        "--deflatten-deepsea",
+        action="store_true",
+        help="De-flatten DeepSea control flow distortion and reconstruct clean CIL methods",
+    )
+    parser.add_argument(
+        "--deepsea-out",
+        help="Destination path for de-flattened assembly binary",
+    )
+    parser.add_argument(
+        "--export-ast",
+        action="store_true",
+        help="Export high-level Abstract Syntax Tree (AST) in JSON format",
+    )
+    parser.add_argument(
+        "--export-cfg",
+        action="store_true",
+        help="Export de-flattened Control Flow Graph (CFG) in Graphviz DOT format",
+    )
+    parser.add_argument(
         "--verify",
         action="store_true",
         help="Execute forensic payload verification & PE/CLR structural integrity audit",
@@ -373,6 +392,18 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
             lines.append(f"      Matched Sections   : {', '.join(itllock['sections_matched'])}")
     else:
         lines.append("  [-] No IntelliLock protection artifacts detected.")
+
+    ds = report.get("deepsea", {})
+    lines.append("")
+    lines.append("--- [DeepSea Control Flow & AST De-flattener] ---")
+    if ds.get("detected"):
+        lines.append(f"  [+] DeepSea Obfuscator Detected! (Confidence: {ds.get('confidence', 'HIGH')})")
+        if ds.get("matched_markers"):
+            lines.append(f"      Matched Markers    : {', '.join(ds['matched_markers'])}")
+        lines.append(f"      Switch Density     : {ds.get('switch_density', 0)} opcodes identified")
+        lines.append(f"      State Var Updates  : {ds.get('state_var_density', 0)} slot assignments")
+    else:
+        lines.append("  [-] No DeepSea obfuscation artifacts detected.")
 
     pe_reb = report.get("pe_rebuilder", {})
     lines.append("")
@@ -609,6 +640,25 @@ def main(argv: Optional[list] = None) -> int:
             sys.stdout.write(f"    * Status: {lic.status.value}, Expiration: {lic.expiration_date}\n")
         except Exception as e:
             sys.stderr.write(f"[-] Synthetic license generation failed: {e}\n")
+
+    # De-flatten DeepSea control flow if requested
+    if args.deflatten_deepsea:
+        try:
+            dest_path = args.deepsea_out or args.output or f"{args.target}.deflattened.exe"
+            rebuilt_pe, ds_rep = DotNetPackerCore.deflatten_deepsea(args.target, output_path=dest_path)
+            sys.stdout.write(f"[+] Successfully de-flattened DeepSea methods -> {dest_path}\n")
+            if args.export_ast and ds_rep.get("methods"):
+                ast_path = f"{dest_path}.ast.json"
+                with open(ast_path, "w", encoding="utf-8") as f:
+                    json.dump([m["ast"] for m in ds_rep["methods"]], f, indent=2)
+                sys.stdout.write(f"    * Exported AST -> {ast_path}\n")
+            if args.export_cfg and ds_rep.get("methods"):
+                cfg_path = f"{dest_path}.cfg.dot"
+                with open(cfg_path, "w", encoding="utf-8") as f:
+                    f.write(ds_rep["methods"][0]["cfg_dot"])
+                sys.stdout.write(f"    * Exported CFG -> {cfg_path}\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] DeepSea de-flattening failed: {e}\n")
 
     # Dump decrypted ConfuserEx strings if requested
     if args.dump_strings:

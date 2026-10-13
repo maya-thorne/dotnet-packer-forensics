@@ -30,6 +30,28 @@ from .eazfuscator_vm import (
     VMOpcode,
     VMOpcodeTable,
 )
+from .deepsea import DeepSeaUnpacker
+from .deepsea_deflattener import (
+    ASTReconstructor,
+    CILDisassembler,
+    CILEmitter,
+    DeepSeaDeflattener,
+    OpaquePredicateEliminator,
+)
+from .deepsea_models import (
+    ASTBlock,
+    ASTIf,
+    ASTMethod,
+    ASTNode,
+    ASTStatement,
+    ASTWhile,
+    BasicBlock,
+    CILInstruction,
+    CILOpcode,
+    CILOperandType,
+    ControlFlowGraph,
+    FlowControl,
+)
 from .intellilock import IntelliLockUnpacker
 from .intellilock_models import (
     HardwareProfile,
@@ -71,4 +93,20 @@ __all__ = [
     "LockType",
     "LicenseStatus",
     "SecurityError",
+    "DeepSeaUnpacker",
+    "DeepSeaDeflattener",
+    "CILDisassembler",
+    "CILEmitter",
+    "OpaquePredicateEliminator",
+    "ASTReconstructor",
+    "CILOpcode",
+    "CILInstruction",
+    "BasicBlock",
+    "ControlFlowGraph",
+    "ASTNode",
+    "ASTMethod",
+    "ASTBlock",
+    "ASTStatement",
+    "ASTIf",
+    "ASTWhile",
 ]
