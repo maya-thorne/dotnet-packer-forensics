@@ -16,6 +16,14 @@ from .payload_verifier import (
 from .pe_overlay import PEOverlayParser
 from .pe_rebuilder import PERebuilder, PERebuildOptions, PERebuildReport
 from .signatures import ProtectorSignatures
+from .unpackers.babel import BabelUnpacker
+from .unpackers.babel_demangler import (
+    AssemblyNode,
+    BabelDemangler,
+    DemangleRule,
+    DemangledSymbol,
+    DependencyGraph,
+)
 from .unpackers.confuserex import ConfuserExUnpacker
 from .unpackers.costura import CosturaUnpacker
 from .unpackers.eazfuscator import EazfuscatorUnpacker
@@ -28,7 +36,7 @@ from .unpackers.eazfuscator_vm import (
 )
 from .unpackers.reactor import DotNetReactorUnpacker
 
-__version__ = "1.6.0"
+__version__ = "1.7.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -54,6 +62,11 @@ __all__ = [
     "VMInstruction",
     "EazfuscatorVMDisassembler",
     "EazfuscatorDevirtualizer",
+    "BabelUnpacker",
+    "BabelDemangler",
+    "DemangleRule",
+    "DemangledSymbol",
+    "AssemblyNode",
+    "DependencyGraph",
     "__version__",
 ]
-

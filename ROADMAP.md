@@ -13,12 +13,12 @@ This document tracks shipped capabilities and future engineering milestones for 
 - [x] **SHA-256 Regression Test Harness & PE Integrity Verifier** — Bitwise byte-level comparison diagnostics, cryptographic hash digest verification (SHA-256/SHA-1/MD5), and deep PE/CLR structural integrity testing with 16 dedicated unit tests.
 - [x] **.NET Reactor NecroBit & Native Stub Envelope Unpacker** — Native wrapper envelope stripping, token-keyed PRNG stream decryption of hidden CIL methods, Tiny/Fat CorILMethod format validation, .necro section reconstruction, and CLI automation.
 - [x] **Eazfuscator.NET Bytecode VM Disassembler & De-virtualizer** — Heuristic VM opcode mapping, proprietary bytecode disassembly, AST-to-CIL translation, Tiny/Fat CorILMethod emission, .eazvm PE section synthesis, and automated directory extraction.
+- [x] **Babel Obfuscator Cross-Assembly Symbol Demangler & Dependency Graph Restorer** — Unicode unprintable sanitization, interface method inference, getter/setter restoration, embedded BabelMap parsing, merged satellite assembly carving, and inter-assembly DAG generation (JSON, DOT, Mermaid) with 26 dedicated unit tests.
 
 ---
 
 ## Planned Milestones
 
-- [ ] **Babel Obfuscator Cross-Assembly Symbol Demangler** — Inter-assembly dependency graph reconstruction.
 - [ ] **ArmDot Method-Level Virtual Machine Opcode Emulator** — CIL bytecode reconstructor.
 - [ ] **IntelliLock Hardware Lock Defeat & License Envelope Neutralizer** — Licensing stub removal and PE reconstruction.
 - [ ] **DeepSea Control Flow De-flattening & AST Reconstructor** — Basic block reorganization and control flow restoration.

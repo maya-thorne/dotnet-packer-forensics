@@ -252,7 +252,8 @@ class CosturaUnpacker:
         # Attempt 1: RFC 1951 Raw Deflate (negative windowBits: -15) - standard Costura format
         try:
             decomp = zlib.decompress(raw_data, -zlib.MAX_WBITS, cls.MAX_DECOMPRESSED_SIZE)
-            return decomp
+            if len(decomp) <= cls.MAX_DECOMPRESSED_SIZE:
+                return decomp
         except Exception:
             pass
 
@@ -260,7 +261,8 @@ class CosturaUnpacker:
         if len(raw_data) > 4:
             try:
                 decomp = zlib.decompress(raw_data[4:], -zlib.MAX_WBITS, cls.MAX_DECOMPRESSED_SIZE)
-                return decomp
+                if len(decomp) <= cls.MAX_DECOMPRESSED_SIZE:
+                    return decomp
             except Exception:
                 pass
 
@@ -268,14 +270,16 @@ class CosturaUnpacker:
         if len(raw_data) > 8:
             try:
                 decomp = zlib.decompress(raw_data[8:], -zlib.MAX_WBITS, cls.MAX_DECOMPRESSED_SIZE)
-                return decomp
+                if len(decomp) <= cls.MAX_DECOMPRESSED_SIZE:
+                    return decomp
             except Exception:
                 pass
 
         # Attempt 4: Standard zlib (with headers)
         try:
             decomp = zlib.decompress(raw_data, cls.MAX_DECOMPRESSED_SIZE)
-            return decomp
+            if len(decomp) <= cls.MAX_DECOMPRESSED_SIZE:
+                return decomp
         except Exception:
             pass
 
@@ -448,9 +452,9 @@ class CosturaUnpacker:
             out_path = os.path.join(output_dir, safe_name)
 
             # Security: ensure resolved path is strictly inside output_dir
-            real_out_path = os.path.abspath(out_path)
-            real_output_dir = os.path.abspath(output_dir)
-            if not real_out_path.startswith(real_output_dir):
+            real_out_path = os.path.realpath(out_path)
+            real_output_dir = os.path.realpath(output_dir)
+            if not real_out_path.startswith(real_output_dir + os.sep) and real_out_path != real_output_dir:
                 raise SecurityError(f"Directory traversal attack detected in filename: {p['output_filename']}")
 
             with open(out_path, "wb") as f:

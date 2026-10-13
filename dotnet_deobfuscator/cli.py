@@ -96,6 +96,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Custom VM opcode table JSON configuration file path",
     )
     parser.add_argument(
+        "--demangle-babel",
+        action="store_true",
+        help="Demangle Babel Obfuscator symbols and reconstruct dependency graph",
+    )
+    parser.add_argument(
+        "--babel-out",
+        help="Destination path for demangled assembly binary",
+    )
+    parser.add_argument(
+        "--export-depgraph",
+        action="store_true",
+        help="Export inter-assembly dependency graph in JSON, Graphviz DOT, and Mermaid formats",
+    )
+    parser.add_argument(
+        "--custom-map",
+        help="Path to external Babel mapping file (XML, JSON, or text format)",
+    )
+    parser.add_argument(
         "--verify",
         action="store_true",
         help="Execute forensic payload verification & PE/CLR structural integrity audit",
@@ -257,6 +275,27 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
     else:
         lines.append("  [-] No Eazfuscator.NET virtualization artifacts detected.")
 
+    babel = report.get("babel", {})
+    lines.append("")
+    lines.append("--- [Babel Obfuscator Forensics & Symbol Demangler] ---")
+    if babel.get("detected"):
+        lines.append(f"  [+] Babel Obfuscator Detected! (Confidence: {babel.get('confidence', 'HIGH')})")
+        if babel.get("has_merged_assemblies"):
+            lines.append(f"      Merged Assemblies  : YES ({babel.get('merged_assemblies_count', 0)} embedded assemblies carved)")
+        if babel.get("has_embedded_map"):
+            lines.append("      Embedded BabelMap  : YES (XML/JSON mapping table identified)")
+        if babel.get("obfuscated_symbols_count", 0) > 0:
+            lines.append(f"      Mangled Tokens     : {babel['obfuscated_symbols_count']:,} Unicode tokens identified")
+        if babel.get("markers_found"):
+            lines.append(f"      Matched Markers    : {', '.join(babel['markers_found'])}")
+        if babel.get("merged_assemblies"):
+            lines.append("      Carved Assemblies:")
+            for m in babel["merged_assemblies"][:5]:
+                lines.append(f"        * {m['output_filename']} ({m['size_bytes']:,} bytes, {m['compression']}, Orig: {m['original_name']})")
+                lines.append(f"          SHA-256 : {m['sha256']}")
+    else:
+        lines.append("  [-] No Babel Obfuscator artifacts detected.")
+
     pe_reb = report.get("pe_rebuilder", {})
     lines.append("")
     lines.append("--- [PE Structural Health & Rebuilder Diagnostics] ---")
@@ -403,6 +442,32 @@ def main(argv: Optional[list] = None) -> int:
                 sys.stdout.write(f"    * {act}\n")
         except Exception as e:
             sys.stderr.write(f"[-] Eazfuscator de-virtualization failed: {e}\n")
+
+    # Demangle Babel Obfuscator symbols and reconstruct dependency graph if requested
+    if args.demangle_babel:
+        try:
+            dest_path = args.babel_out or args.output or f"{args.target}.demangled.exe"
+            demangled_pe, babel_rep = DotNetPackerCore.demangle_babel(
+                args.target, output_path=dest_path, custom_map=args.custom_map
+            )
+            count = babel_rep.get("symbols_demangled", 0)
+            sys.stdout.write(
+                f"[+] Successfully demangled {count} Babel symbols -> {dest_path}\n"
+            )
+            for act in babel_rep.get("actions_applied", []):
+                sys.stdout.write(f"    * {act}\n")
+            if args.export_depgraph:
+                base_dir = os.path.dirname(os.path.abspath(dest_path))
+                dot_file = os.path.join(base_dir, "dependency_graph.dot")
+                mermaid_file = os.path.join(base_dir, "dependency_graph.mermaid")
+                with open(dot_file, "w", encoding="utf-8") as f:
+                    f.write(babel_rep.get("depgraph_dot", ""))
+                with open(mermaid_file, "w", encoding="utf-8") as f:
+                    f.write(babel_rep.get("depgraph_mermaid", ""))
+                sys.stdout.write(f"    * Exported dependency graph DOT -> {dot_file}\n")
+                sys.stdout.write(f"    * Exported dependency graph Mermaid -> {mermaid_file}\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] Babel demangling failed: {e}\n")
 
     # Dump decrypted ConfuserEx strings if requested
     if args.dump_strings:

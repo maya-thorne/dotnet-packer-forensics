@@ -718,7 +718,7 @@ class DotNetReactorUnpacker:
             out_path = os.path.join(output_dir, safe_name)
             real_out_path = os.path.realpath(out_path)
 
-            if not real_out_path.startswith(real_output_dir):
+            if not real_out_path.startswith(real_output_dir + os.sep) and real_out_path != real_output_dir:
                 raise SecurityError(f"Malicious path traversal detected: {filename}")
 
             with open(real_out_path, "wb") as f:

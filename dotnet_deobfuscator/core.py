@@ -16,6 +16,7 @@ from .payload_verifier import (
 from .pe_overlay import PEOverlayParser
 from .pe_rebuilder import PERebuilder, PERebuildOptions, PERebuildReport
 from .signatures import ProtectorSignatures
+from .unpackers.babel import BabelUnpacker
 from .unpackers.confuserex import ConfuserExUnpacker
 from .unpackers.costura import CosturaUnpacker
 from .unpackers.eazfuscator import EazfuscatorUnpacker
@@ -89,7 +90,11 @@ class DotNetPackerCore:
         eaz_detect = EazfuscatorUnpacker.detect(data)
         eaz_containers = EazfuscatorUnpacker.extract_vm_containers(data)
 
-        # 8. PE Structural Health & Section Rebuilder Diagnostics
+        # 8. Babel Obfuscator Cross-Assembly Forensics & Merged Assemblies
+        babel_detect = BabelUnpacker.detect(data)
+        babel_merged = BabelUnpacker.extract_merged_assemblies(data)
+
+        # 9. PE Structural Health & Section Rebuilder Diagnostics
         pe_diag = PERebuilder.detect_anomalies(data)
 
         # 9. Cryptographic Hashes & Integrity Baselines
@@ -222,6 +227,27 @@ class DotNetPackerCore:
                     for c in eaz_containers
                 ],
             },
+            "babel": {
+                "detected": babel_detect["is_babel"],
+                "confidence": babel_detect["confidence"],
+                "has_merged_assemblies": babel_detect["has_merged_assemblies"],
+                "merged_assemblies_count": babel_detect["merged_assemblies_count"],
+                "has_embedded_map": babel_detect["has_embedded_map"],
+                "obfuscated_symbols_count": babel_detect["obfuscated_symbols_count"],
+                "markers_found": babel_detect["markers_found"],
+                "merged_assemblies": [
+                    {
+                        "original_name": m["original_name"],
+                        "output_filename": m["output_filename"],
+                        "size_bytes": m["size_bytes"],
+                        "sha256": m["sha256"],
+                        "is_pe": m["is_pe"],
+                        "compression": m["compression"],
+                        "entropy": m["entropy"],
+                    }
+                    for m in babel_merged
+                ],
+            },
         }
 
     @classmethod
@@ -292,11 +318,18 @@ class DotNetPackerCore:
                     f.write(rebuilt_pe)
                 return True
 
+        # Check if single Babel merged assembly exists
+        babel_merged = BabelUnpacker.extract_merged_assemblies(data)
+        if len(babel_merged) == 1:
+            with open(output_path, "wb") as f:
+                f.write(babel_merged[0]["payload_bytes"])
+            return True
+
         return False
 
     @classmethod
     def unpack_to_dir(cls, input_path: str, output_dir: str) -> List[Dict[str, any]]:
-        """Extracts all embedded Costura, ConfuserEx, .NET Reactor, and Eazfuscator assemblies into target directory."""
+        """Extracts all embedded Costura, ConfuserEx, .NET Reactor, Eazfuscator, and Babel assemblies into target directory."""
         with open(input_path, "rb") as f:
             data = f.read()
         written = []
@@ -304,7 +337,31 @@ class DotNetPackerCore:
         written.extend(ConfuserExUnpacker.unpack_to_directory(data, output_dir))
         written.extend(DotNetReactorUnpacker.unpack_to_directory(data, output_dir))
         written.extend(EazfuscatorUnpacker.unpack_to_directory(data, output_dir))
+        written.extend(BabelUnpacker.unpack_to_directory(data, output_dir))
         return written
+
+    @classmethod
+    def demangle_babel(
+        cls,
+        input_path: str,
+        output_path: Optional[str] = None,
+        custom_map: Optional[Union[Dict[str, str], str]] = None,
+    ) -> Tuple[bytes, Dict[str, any]]:
+        """Demangles Babel Obfuscator symbols and reconstructs cross-assembly dependency graph."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        demangled_pe, rep = BabelUnpacker.demangle_assembly(data, custom_map=custom_map)
+        if output_path and rep.get("success"):
+            with open(output_path, "wb") as f:
+                f.write(demangled_pe)
+        return demangled_pe, rep
+
+    @classmethod
+    def extract_babel_assemblies(cls, input_path: str) -> List[Dict[str, any]]:
+        """Carves all merged satellite assemblies embedded within Babel binary."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        return BabelUnpacker.extract_merged_assemblies(data)
 
     @classmethod
     def strip_reactor_envelope(cls, input_path: str, output_path: str) -> bool:

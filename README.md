@@ -108,6 +108,10 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `--eaz-out` | Destination path for devirtualized assembly binary | None |
 | `--disasm-vm` | Disassemble Eazfuscator VM bytecode containers to formatted assembly | `False` |
 | `--vm-table` | Custom VM opcode table JSON configuration file path | None |
+| `--demangle-babel` | Demangle Babel Obfuscator symbols and reconstruct cross-assembly dependency graph | `False` |
+| `--babel-out` | Destination path for demangled assembly binary | None |
+| `--export-depgraph` | Export inter-assembly dependency graph in JSON, Graphviz DOT, and Mermaid formats | `False` |
+| `--custom-map` | Path to external Babel mapping file (XML, JSON, or text format) | None |
 | `--rebuild` | Reconstruct damaged PE headers, realign sections, and repair standalone binary | `False` |
 | `--rebuild-out` | Output destination path for rebuilt PE binary | None |
 | `--unmap-dump` | Force process memory dump unmapping (realign RVA mapped sections to disk raw offsets) | `False` |
@@ -118,7 +122,7 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v1.6.0` |
+| `--version` | Display engine version and exit | `v1.7.0` |
 
 </details>
 
@@ -222,9 +226,14 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td>Extracts and decompresses embedded assemblies (.compressed) via DeflateStream inversion, path traversal sanitization, and SHA-256 validation.</td>
     </tr>
     <tr>
+      <td><code>dotnet_deobfuscator/unpackers/confuserex_constants.py</code></td>
+      <td><b>ConfuserEx Constants Decryptor</b></td>
+      <td>Decodes string constants (LCG/XorShift PRNG stream ciphers, key schedules), parses 7-bit length encoded tables, and manages auto key recovery.</td>
+    </tr>
+    <tr>
       <td><code>dotnet_deobfuscator/unpackers/confuserex.py</code></td>
       <td><b>ConfuserEx Unpacker Engine</b></td>
-      <td>Decodes string constants (LCG/XorShift PRNG stream ciphers), unpacks encrypted resource containers, and handles CLI resource catalogs.</td>
+      <td>Identifies ConfuserEx protections, unpacks encrypted resource containers, and handles CLI resource catalogs with safe directory exports.</td>
     </tr>
     <tr>
       <td><code>dotnet_deobfuscator/unpackers/reactor.py</code></td>
@@ -240,6 +249,16 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>dotnet_deobfuscator/unpackers/eazfuscator.py</code></td>
       <td><b>Eazfuscator Unpacker Engine</b></td>
       <td>Carves embedded VM bytecode containers across PE sections and overlay, synthesizes aligned .eazvm sections, and extracts devirtualized assemblies.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/unpackers/babel_demangler.py</code></td>
+      <td><b>Babel Demangler Engine</b></td>
+      <td>Cleans Unicode unprintable characters, infers interface methods, restores getter/setters, parses BabelMap files, and builds inter-assembly DAGs.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/unpackers/babel.py</code></td>
+      <td><b>Babel Unpacker Engine</b></td>
+      <td>Identifies Babel signatures, carves and decompresses embedded merged satellite assemblies, and manages safe directory exports.</td>
     </tr>
     <tr>
       <td><code>dotnet_deobfuscator/pe_rebuilder.py</code></td>
@@ -340,6 +359,11 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>tests/test_eazfuscator_unpacker.py</code></td>
       <td><b>Eazfuscator Unpacker Test</b></td>
       <td>Validates opcode table inference, bytecode disassembly, CIL Tiny/Fat translation, branch relative fixups, .eazvm PE section injection, and CLI flags.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_babel_unpacker.py</code></td>
+      <td><b>Babel Unpacker &amp; Demangler Test</b></td>
+      <td>Validates Unicode cleaning, interface inference, getter/setter restoration, DAG topological sorting, cycle detection, DOT/Mermaid export, merged PE carving, and CLI flags.</td>
     </tr>
   </tbody>
 </table>

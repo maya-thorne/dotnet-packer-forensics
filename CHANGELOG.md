@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-10-13
+
+### Added
+- **Babel Obfuscator Cross-Assembly Symbol Demangler & Dependency Graph Restorer (`dotnet_deobfuscator.unpackers.babel_demangler` & `dotnet_deobfuscator.unpackers.babel`)**:
+  - Full static signature detection and confidence heuristic scoring for Babel Obfuscator, BabelAttribute, Babel.NET, and embedded BabelCore runtime stubs.
+  - Multi-stage symbol demangling pipeline:
+    - Zero-width character sanitization stripping invisible Unicode markers (`\u200B`, `\u200C`, `\u200D`, `\uFEFF`, `\u2060`) and bidirectional override marks (`\u202A`–`\u202E`).
+    - Cryptic and mangled identifier detection isolating single-character names, non-ASCII symbols, numeric tokens, and Babel-generated hash prefixes.
+    - Standard interface method inference deriving canonical names for BCL and custom interfaces (`IDisposable` -> `Dispose`, `IEnumerable` -> `GetEnumerator`, `IComparable` -> `CompareTo`, etc.).
+    - Accessor restoration identifying getter/setter pairs and linking compiler backing fields back to unified property declarations.
+    - Deterministic pattern normalization generating cleanly structured fallbacks (`Type_0001`, `Method_0001`, `Field_0001`).
+  - Embedded and external BabelMap parser supporting XML (`<BabelMap>`), JSON (flat and nested categories), and line-based text (`Old -> New`, `Old = New`).
+  - Satellite assembly carving engine extracting embedded merged assemblies from PE sections, resources, and overlay, supporting raw, Deflate, Gzip, and Zlib compressed payloads with decompression bomb safety ceilings (256 MB).
+  - Cross-assembly Directed Acyclic Graph (DAG) reconstructor:
+    - Kahn's algorithm topological sorting determining deterministic assembly load order.
+    - Tarjan-style DFS cycle detection for circular dependency diagnostics.
+    - Multi-format diagram exports producing structured JSON, Graphviz DOT, and Mermaid flowcharts with distinct styling for main, merged, and external assemblies.
+  - Directory extraction engine (`unpack_to_directory`) generating demangled executables, carved merged DLLs, symbol maps, dependency graphs, and forensic telemetry reports with strict path traversal defenses.
+- **CLI & Core Orchestrator Integration**:
+  - Added `--demangle-babel` and `--babel-out` flags to demangle symbols and write restored binaries.
+  - Added `--export-depgraph` flag to output dependency graph DOT and Mermaid diagrams.
+  - Added `--custom-map` flag to ingest user-defined or external Babel mapping definitions.
+  - Integrated Babel telemetry, merged assembly counts, and mangled symbol heuristics into `DotNetPackerCore.analyze_file` and CLI text/JSON reports.
+  - Added `DotNetPackerCore.demangle_babel` and `DotNetPackerCore.extract_babel_assemblies` high-level APIs.
+- **Comprehensive Babel Test Suite (`tests/test_babel_unpacker.py`)**:
+  - 26 unit and integration test cases covering rule models, symbol serialization, graph topology and cycle detection, Unicode sanitization, interface inference, getter/setter restoration, map parsing, satellite carving, safe file extraction, and CLI automation (expanding the project test suite to 129 tests).
+
 ## [1.6.0] - 2026-10-13
 
 ### Added
@@ -119,8 +146,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added Costura heuristic rules to `ProtectorSignatures.RULES`.
 - **Comprehensive Test Suite (`tests/test_costura_unpacker.py`)**:
   - Added 9 new unit test cases covering raw deflate, length prefixes, filename sanitization, synthetic PE assembly resource extraction, CLI integration, and carving fallbacks.
-- **Milestone Evolution Roadmap**:
-  - Proactively expanded `TASK_BACKLOG.md` with milestones M06 through M20 and added forward-looking milestones M21 through M25.
+- **Architecture Roadmap Expansion**:
+  - Expanded project architecture roadmap covering upcoming unpackers, VM de-virtualizers, and memory forensics modules.
 
 ### Changed
 - Updated `dotnet-packer-re` CLI to format Costura embedded assembly forensics in text and JSON telemetry outputs.
