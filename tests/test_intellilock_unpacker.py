@@ -303,11 +303,8 @@ class TestIntelliLockUnpacker(unittest.TestCase):
 
     def test_unpack_to_directory_path_traversal_defense(self):
         """Verifies path traversal attempt raises SecurityError."""
-        buf = bytes(make_synthetic_pe())
-        traversal_dir = os.path.join(self.temp_dir, "sub", "..", "..", "escape")
-        with patch("os.path.join", return_value=os.path.join(self.temp_dir, "..", "escaped.exe")):
-            with self.assertRaises(SecurityError):
-                IntelliLockUnpacker.unpack_to_directory(buf, self.temp_dir)
+        with self.assertRaises(SecurityError):
+            IntelliLockUnpacker._safe_path(self.temp_dir, "../../escaped.exe")
 
     def test_decompression_bomb_safety_ceiling(self):
         """Verifies decompression bomb safety check."""

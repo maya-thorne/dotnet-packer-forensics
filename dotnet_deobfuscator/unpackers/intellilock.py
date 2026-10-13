@@ -381,6 +381,14 @@ class IntelliLockUnpacker:
     # =========================================================================
 
     @classmethod
+    def _safe_path(cls, real_output_dir: str, filename: str) -> str:
+        """Validates that candidate filename resolves strictly within the output directory."""
+        target = os.path.realpath(os.path.join(real_output_dir, filename))
+        if not target.startswith(real_output_dir + os.sep) and target != real_output_dir:
+            raise SecurityError(f"Path traversal detected for destination: {target}")
+        return target
+
+    @classmethod
     def unpack_to_directory(
         cls,
         data: bytes,
@@ -402,26 +410,20 @@ class IntelliLockUnpacker:
         files_written = []
 
         # 1. Write unlocked binary
-        bin_path = os.path.realpath(os.path.join(real_output_dir, "unlocked_main.exe"))
-        if not bin_path.startswith(real_output_dir + os.sep):
-            raise SecurityError(f"Path traversal detected for destination: {bin_path}")
+        bin_path = cls._safe_path(real_output_dir, "unlocked_main.exe")
         with open(bin_path, "wb") as f:
             f.write(unlocked_bin)
         files_written.append(bin_path)
 
         # 2. Write synthetic virtual license (.lic)
-        lic_path = os.path.realpath(os.path.join(real_output_dir, "virtual_license.lic"))
-        if not lic_path.startswith(real_output_dir + os.sep):
-            raise SecurityError(f"Path traversal detected for destination: {lic_path}")
+        lic_path = cls._safe_path(real_output_dir, "virtual_license.lic")
         with open(lic_path, "wb") as f:
             f.write(lic.to_bytes())
         files_written.append(lic_path)
 
         # 3. Write hardware profile bypass JSON
         hw_profile = HardwareProfile.default_profile()
-        hw_path = os.path.realpath(os.path.join(real_output_dir, "hardware_profile.json"))
-        if not hw_path.startswith(real_output_dir + os.sep):
-            raise SecurityError(f"Path traversal detected for destination: {hw_path}")
+        hw_path = cls._safe_path(real_output_dir, "hardware_profile.json")
         hw_dict = {
             "hardware_id": hw_profile.compute_hardware_id(),
             "cpu_id": hw_profile.cpu_id,
@@ -435,9 +437,7 @@ class IntelliLockUnpacker:
         files_written.append(hw_path)
 
         # 4. Write manifest metadata JSON
-        manifest_path = os.path.realpath(os.path.join(real_output_dir, "intellilock_manifest.json"))
-        if not manifest_path.startswith(real_output_dir + os.sep):
-            raise SecurityError(f"Path traversal detected for destination: {manifest_path}")
+        manifest_path = cls._safe_path(real_output_dir, "intellilock_manifest.json")
         with open(manifest_path, "w", encoding="utf-8") as f:
             json.dump(meta.to_dict(), f, indent=2)
         files_written.append(manifest_path)
