@@ -6,7 +6,7 @@ Engineered & Audited by Maya Thorne.
 import os
 import struct
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from .dotnet_analyzer import DotNetAnalyzer
 from .payload_verifier import (
