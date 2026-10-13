@@ -192,52 +192,54 @@ class DeepSeaUnpacker:
         return buf
 
     @classmethod
+    def _safe_path(cls, real_output_dir: str, filename: str) -> str:
+        """Validates that candidate filename resolves strictly within the output directory."""
+        target = os.path.realpath(os.path.join(real_output_dir, filename))
+        if not target.startswith(real_output_dir + os.sep) and target != real_output_dir:
+            raise SecurityError(f"Path traversal detected: {filename}")
+        return target
+
+    @classmethod
     def unpack_to_directory(cls, data: bytes, output_dir: str) -> Dict[str, Any]:
         """Extracts de-flattened assembly, AST, CFG diagrams, and telemetry report to directory safely."""
         os.makedirs(output_dir, exist_ok=True)
         real_output_dir = os.path.realpath(output_dir)
 
-        def safe_path(filename: str) -> str:
-            target = os.path.realpath(os.path.join(real_output_dir, filename))
-            if not target.startswith(real_output_dir + os.sep) and target != real_output_dir:
-                raise SecurityError(f"Path traversal detected: {filename}")
-            return target
-
         rebuilt_pe, report = cls.deflatten_assembly(data)
 
         # Write deflattened binary
-        main_path = safe_path("deflattened_main.exe")
+        main_path = cls._safe_path(real_output_dir, "deflattened_main.exe")
         with open(main_path, "wb") as f:
             f.write(rebuilt_pe)
 
-        methods_dir = safe_path("methods")
+        methods_dir = cls._safe_path(real_output_dir, "methods")
         os.makedirs(methods_dir, exist_ok=True)
 
         # Export individual method artifacts
         for idx, m in enumerate(report["methods"]):
             m_name = m["method_name"]
-            cil_path = safe_path(os.path.join("methods", f"{m_name}_clean.bin"))
+            cil_path = cls._safe_path(real_output_dir, os.path.join("methods", f"{m_name}_clean.bin"))
             with open(cil_path, "wb") as f:
                 f.write(m["clean_cil"])
 
-            ast_path = safe_path(os.path.join("methods", f"{m_name}_ast.json"))
+            ast_path = cls._safe_path(real_output_dir, os.path.join("methods", f"{m_name}_ast.json"))
             with open(ast_path, "w", encoding="utf-8") as f:
                 json.dump(m["ast"], f, indent=2)
 
-            cs_path = safe_path(os.path.join("methods", f"{m_name}_decompiled.cs"))
+            cs_path = cls._safe_path(real_output_dir, os.path.join("methods", f"{m_name}_decompiled.cs"))
             with open(cs_path, "w", encoding="utf-8") as f:
                 f.write(m["csharp_pseudocode"])
 
-            dot_path = safe_path(os.path.join("methods", f"{m_name}_cfg.dot"))
+            dot_path = cls._safe_path(real_output_dir, os.path.join("methods", f"{m_name}_cfg.dot"))
             with open(dot_path, "w", encoding="utf-8") as f:
                 f.write(m["cfg_dot"])
 
-            mermaid_path = safe_path(os.path.join("methods", f"{m_name}_cfg.mermaid"))
+            mermaid_path = cls._safe_path(real_output_dir, os.path.join("methods", f"{m_name}_cfg.mermaid"))
             with open(mermaid_path, "w", encoding="utf-8") as f:
                 f.write(m["cfg_mermaid"])
 
         # Write telemetry summary manifest
-        telemetry_path = safe_path("deepsea_forensic_report.json")
+        telemetry_path = cls._safe_path(real_output_dir, "deepsea_forensic_report.json")
         summary_manifest = {
             "rebuilt_binary": "deflattened_main.exe",
             "sha256": report["sha256"],

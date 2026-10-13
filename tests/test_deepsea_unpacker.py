@@ -286,10 +286,8 @@ class TestDeepSeaUnpackerOrchestrator(unittest.TestCase):
         self.assertEqual(manifest["rebuilt_binary"], "deflattened_main.exe")
 
     def test_path_traversal_defense(self):
-        data = self.pe_data + b"DeepSeaObfuscator\x00"
-        with patch("os.path.join", return_value=os.path.join(self.tmp_dir.name, "..", "escaped.exe")):
-            with self.assertRaises(SecurityError):
-                DeepSeaUnpacker.unpack_to_directory(data, self.tmp_dir.name)
+        with self.assertRaises(SecurityError):
+            DeepSeaUnpacker._safe_path(self.tmp_dir.name, "../../escaped.exe")
 
     def test_payload_bounds_check(self):
         oversized = bytes(101 * 1024 * 1024)  # 101 MB exceeds 100 MB cap
