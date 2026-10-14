@@ -35,6 +35,8 @@ def build_analysis_report(
     deepsea_detect: Dict[str, Any],
     antitamper_detect: Dict[str, Any],
     antidump_detect: Dict[str, Any],
+    native_demux_detect: Optional[Dict[str, Any]] = None,
+    native_demux_payloads: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Assembles all subsystem forensic findings into a unified analysis report dictionary."""
     return {
@@ -208,5 +210,17 @@ def build_analysis_report(
             "bsjb_rva": antidump_detect["bsjb_rva"],
             "cor20_recovered": antidump_detect["cor20_recovered"],
             "anomalies": antidump_detect["anomalies"],
+        },
+        "native_demuxer": {
+            "detected": (native_demux_detect or {}).get("is_multi_arch", False),
+            "confidence": (native_demux_detect or {}).get("confidence", "NONE"),
+            "total_payloads": (native_demux_detect or {}).get("total_payloads", 0),
+            "architectures_found": (native_demux_detect or {}).get("architectures_found", []),
+            "platforms_found": (native_demux_detect or {}).get("platforms_found", []),
+            "sources_found": (native_demux_detect or {}).get("sources_found", []),
+            "has_architecture_mismatch": (native_demux_detect or {}).get("has_architecture_mismatch", False),
+            "mismatch_count": (native_demux_detect or {}).get("mismatch_count", 0),
+            "anomalies": (native_demux_detect or {}).get("anomalies", []),
+            "payloads": native_demux_payloads or [],
         },
     }

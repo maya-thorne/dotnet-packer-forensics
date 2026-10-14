@@ -133,6 +133,10 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `--heal-out` | Destination path for healed standalone PE binary | None |
 | `--scylla-mode` | Enforce Scylla-compatible memory dump unmapping and CLR import reconstruction | `False` |
 | `--anti-dump-dir` | Directory path to export healed binary, carved sections, and telemetry manifest | None |
+| `--demux-native` | Demux embedded multi-architecture native binaries (x86, x64, ARM64) | `False` |
+| `--demux-out` | Directory path to export demuxed native binaries organized by architecture | None |
+| `--route-arch` | Target CPU architecture to simulate runtime loader routing for (e.g. x86, x64, arm64) | None |
+| `--route-os` | Target OS platform for routing simulation (windows, linux, osx) | `windows` |
 | `--rebuild` | Reconstruct damaged PE headers, realign sections, and repair standalone binary | `False` |
 | `--rebuild-out` | Output destination path for rebuilt PE binary | None |
 | `--unmap-dump` | Force process memory dump unmapping (realign RVA mapped sections to disk raw offsets) | `False` |
@@ -143,7 +147,7 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v2.2.0` |
+| `--version` | Display engine version and exit | `v2.3.0` |
 
 
 </details>
@@ -351,6 +355,21 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>dotnet_deobfuscator/unpackers/antidump.py</code></td>
       <td><b>Anti-Dump Unpacker Engine</b></td>
       <td>Detects anti-dump corruptions, normalizes memory dumps, and manages safe directory exports with path traversal defenses.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/unpackers/native_demuxer_models.py</code></td>
+      <td><b>Native Demuxer Models &amp; Enums</b></td>
+      <td>Encapsulates TargetArchitecture, TargetOS, BinaryFormat, DemuxSource enums, and platform routing telemetry data structures.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/unpackers/native_demuxer_engine.py</code></td>
+      <td><b>Multi-Arch Inspection &amp; Router Engine</b></td>
+      <td>Inspects PE/ELF/Mach-O machine architectures, carves compressed/raw native binaries, wipes memory buffers, and simulates platform routing.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/unpackers/native_demuxer.py</code></td>
+      <td><b>Native Demuxer Unpacker Facade</b></td>
+      <td>High-level orchestrator for static discovery, architecture mismatch detection, and organized directory export with routing manifests.</td>
     </tr>
     <tr>
       <td><code>dotnet_deobfuscator/analysis_collector.py</code></td>

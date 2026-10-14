@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-10-14
+
+### Added
+- **Native Multi-Architecture Resource Demuxer & Platform Router (`dotnet_deobfuscator.unpackers.native_demuxer_models`, `dotnet_deobfuscator.unpackers.native_demuxer_engine`, `dotnet_deobfuscator.unpackers.native_demuxer`)**:
+  - Full static discovery and demuxing engine for multi-architecture native binary payloads (x86, x64, ARM64, ARM, IA64) embedded or bundled within .NET assemblies, wrappers, and single-file carrier hosts.
+  - Deep binary format and architecture inspection (`inspect_binary_format`) identifying Windows PE (`IMAGE_FILE_MACHINE_I386`, `IMAGE_FILE_MACHINE_AMD64`, `IMAGE_FILE_MACHINE_ARM64`, `IMAGE_FILE_MACHINE_ARMNT`), Linux ELF (`ELF32`, `ELF64`), and macOS Mach-O (`MACHO32`, `MACHO64`) binaries from raw byte streams.
+  - Multi-source container carver locating embedded payloads across CLR manifest resources, Costura naming conventions (`costura32.*`, `costura64.*`), NuGet runtime catalog directories (`runtimes/<rid>/native/`), folder prefixes, and appended PE overlay data.
+  - Embedded stream decompressor (`decompress_payload`) automatically handling Costura DeflateStream payloads (4-byte uncompressed length prefix + DeflateStream), standard zlib streams, gzip headers, and raw deflate streams with 100 MB bounds checking against decompression bombs.
+  - Automated architecture mismatch and spoofing detection (`mismatch_detected`) cross-verifying declared manifest/path architectures against physical binary machine headers to alert analysts to masqueraded or corrupted payloads.
+  - Platform routing simulator (`route_for_platform`) modeling OS dynamic loader resolution rules, including exact match routing, Windows on ARM x64/x86 emulation fallbacks, 64-bit Windows WoW64 compatibility fallbacks, and macOS Rosetta 2 binary translation fallbacks.
+  - Safe directory export pipeline (`unpack_to_directory`) organizing carved binaries into dedicated architecture subdirectories (`x86/`, `x64/`, `arm64/`, etc.) and generating structured `routing_manifest.json` reports with strict path traversal defenses (`_safe_path`).
+  - Cryptographic memory sanitization (`zeroize_buffer`) using `ctypes.memset` to wipe transient decryption and decompression buffers immediately upon extraction.
+- **CLI & Core Orchestrator Integration**:
+  - Added `--demux-native` flag to run static multi-architecture demuxing and display all carved payloads, machine types, and mismatch warnings.
+  - Added `--demux-out <DIR>` flag to carve and export demuxed native binaries into architecture-organized folders with a complete routing manifest.
+  - Added `--route-arch <ARCH>` and `--route-os <OS>` flags to simulate runtime platform routing and loader resolution for specified architectures.
+  - Integrated native demuxer telemetry and reporting into `DotNetPackerCore.analyze_file`, `DotNetPackerCore.demux_native`, `DotNetPackerCore.route_native`, `DotNetPackerCore.unpack_native_dir`, `analysis_collector.py`, and `report_formatter.py`.
+- **Comprehensive Native Demuxer Test Suite (`tests/test_native_demuxer.py`)**:
+  - 14 dedicated unit and integration test cases covering x86/x64/ARM64 PE header inspection, ELF/Mach-O machine parsing, buffer zeroization, DeflateStream decompression, multi-architecture carving, architecture mismatch detection, exact and fallback platform routing (WoW64, ARM64 emulation, Rosetta 2), path traversal defense, directory exports, and CLI execution (expanding the total test suite to 243 tests).
+
 ## [2.2.0] - 2026-10-13
 
 ### Added

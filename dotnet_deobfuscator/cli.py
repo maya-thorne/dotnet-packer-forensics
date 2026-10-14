@@ -211,6 +211,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory path to export healed binary, carved sections, and telemetry manifest",
     )
     parser.add_argument(
+        "--demux-native",
+        action="store_true",
+        help="Demux embedded multi-architecture native binaries (x86, x64, ARM64)",
+    )
+    parser.add_argument(
+        "--demux-out",
+        help="Directory path to export demuxed native binaries organized by architecture",
+    )
+    parser.add_argument(
+        "--route-arch",
+        help="Target CPU architecture to simulate runtime loader routing for (e.g. x86, x64, arm64)",
+    )
+    parser.add_argument(
+        "--route-os",
+        default="windows",
+        help="Target OS platform for routing simulation (windows, linux, osx, default: windows)",
+    )
+    parser.add_argument(
         "--verify",
 
         action="store_true",
@@ -525,6 +543,51 @@ def main(argv: Optional[list] = None) -> int:
             )
         except Exception as e:
             sys.stderr.write(f"[-] Anti-Dump directory export failed: {e}\n")
+
+    # Native multi-architecture demuxing and routing
+    if args.demux_native:
+        try:
+            res = DotNetPackerCore.demux_native(args.target)
+            telem = res.get("telemetry", {})
+            payloads = res.get("payloads", [])
+            sys.stdout.write(f"[+] Native Demuxer Analysis: Found {len(payloads)} native payloads\n")
+            sys.stdout.write(f"    * Architectures   : {', '.join(telem.get('architectures_found', [])) or 'None'}\n")
+            sys.stdout.write(f"    * Target Platforms: {', '.join(telem.get('platforms_found', [])) or 'None'}\n")
+            for p in payloads:
+                mismatch_flag = " [!] MISMATCH" if p.get("mismatch_detected") else ""
+                sys.stdout.write(
+                    f"    -> {p.get('name')} (Arch: {p.get('target_arch')}{mismatch_flag}, Format: {p.get('format')}, Size: {p.get('size_bytes'):,} bytes)\n"
+                )
+        except Exception as e:
+            sys.stderr.write(f"[-] Native demuxing failed: {e}\n")
+
+    if args.demux_out:
+        try:
+            res = DotNetPackerCore.unpack_native_dir(
+                args.target, output_dir=args.demux_out, target_arch=args.route_arch
+            )
+            sys.stdout.write(
+                f"[+] Successfully demuxed and exported {res.get('total_extracted', 0)} native binaries -> {res.get('output_dir')}\n"
+            )
+            sys.stdout.write(f"    * Manifest: {res.get('manifest_path')}\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] Native demuxing export failed: {e}\n")
+
+    if args.route_arch:
+        try:
+            route_res = DotNetPackerCore.route_native(
+                args.target, target_os=args.route_os, target_arch=args.route_arch
+            )
+            sys.stdout.write(
+                f"[+] Platform Route Result for '{args.route_os}-{args.route_arch}': {route_res.get('resolution_status')}\n"
+            )
+            sys.stdout.write(f"    * Status: {route_res.get('resolution_status')}\n")
+            sys.stdout.write(f"    * Reason: {route_res.get('reason')}\n")
+            matched = route_res.get("matched_payload")
+            if matched:
+                sys.stdout.write(f"    * Matched Binary: {matched.get('name')} (Format: {matched.get('format')})\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] Platform routing failed: {e}\n")
 
 
 

@@ -98,8 +98,19 @@ from .unpackers.antidump_models import (
     SectionType,
     SynthesizedImportInfo,
 )
+from .unpackers.native_demuxer import NativeDemuxerUnpacker
+from .unpackers.native_demuxer_engine import NativeDemuxerEngine
+from .unpackers.native_demuxer_models import (
+    BinaryFormat,
+    DemuxSource,
+    NativeDemuxerTelemetry,
+    NativePayloadInfo,
+    PlatformRouteResult,
+    TargetArchitecture,
+    TargetOS,
+)
 
-__version__ = "2.2.0"
+__version__ = "2.3.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -180,6 +191,15 @@ __all__ = [
     "HealedSectionInfo",
     "SectionType",
     "SynthesizedImportInfo",
+    "NativeDemuxerUnpacker",
+    "NativeDemuxerEngine",
+    "TargetArchitecture",
+    "TargetOS",
+    "BinaryFormat",
+    "DemuxSource",
+    "NativePayloadInfo",
+    "PlatformRouteResult",
+    "NativeDemuxerTelemetry",
     "__version__",
 ]
 
