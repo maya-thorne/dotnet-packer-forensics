@@ -19,6 +19,7 @@ from .pe_rebuilder import PERebuilder, PERebuildOptions, PERebuildReport
 from .signatures import ProtectorSignatures
 from .unpackers.antidump import AntiDumpUnpacker
 from .unpackers.antidump_models import AntiDumpHealOptions, AntiDumpHealResult
+from .unpackers.native_demuxer import NativeDemuxerUnpacker
 from .unpackers.armdot import (
     ArmDotOpcodeTable,
     ArmDotUnpacker,
@@ -106,10 +107,15 @@ class DotNetPackerCore:
         # 13. Anti-Dump Memory PE Header & Scylla Dump Forensics
         antidump_detect = AntiDumpUnpacker.detect(data)
 
-        # 14. PE Structural Health & Section Rebuilder Diagnostics
+        # 14. Native Multi-Architecture Resource Demuxer & Platform Router Forensics
+        native_demux_detect = NativeDemuxerUnpacker.detect(data)
+        _, native_demux_payload_objs = NativeDemuxerUnpacker.demux(data)
+        native_demux_payloads = [p.to_dict() for p in native_demux_payload_objs]
+
+        # 15. PE Structural Health & Section Rebuilder Diagnostics
         pe_diag = PERebuilder.detect_anomalies(data)
 
-        # 15. Cryptographic Hashes & Integrity Baselines
+        # 16. Cryptographic Hashes & Integrity Baselines
         hashes = PayloadVerifier.compute_hashes(data)
 
         return build_analysis_report(
@@ -141,6 +147,8 @@ class DotNetPackerCore:
             deepsea_detect=deepsea_detect,
             antitamper_detect=antitamper_detect,
             antidump_detect=antidump_detect,
+            native_demux_detect=native_demux_detect,
+            native_demux_payloads=native_demux_payloads,
         )
 
 
@@ -614,6 +622,43 @@ class DotNetPackerCore:
             return AntiDumpUnpacker.unpack_to_directory(
                 f.read(), output_dir=output_dir, options=options
             )
+
+    @classmethod
+    def demux_native(cls, input_path: str) -> Dict[str, Any]:
+        """Scans and demuxes embedded multi-architecture native binaries."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        telemetry, payloads = NativeDemuxerUnpacker.demux(data)
+        return {
+            "telemetry": telemetry.to_dict(),
+            "payloads": [p.to_dict() for p in payloads],
+        }
+
+    @classmethod
+    def route_native(
+        cls,
+        input_path: str,
+        target_os: str = "windows",
+        target_arch: str = "x64",
+    ) -> Dict[str, Any]:
+        """Simulates dynamic loader routing and platform resolution for given OS and architecture."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        return NativeDemuxerUnpacker.route(data, target_os=target_os, target_arch=target_arch)
+
+    @classmethod
+    def unpack_native_dir(
+        cls,
+        input_path: str,
+        output_dir: str,
+        target_arch: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Demuxes native multi-architecture binaries and exports to architecture-organized directory."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        return NativeDemuxerUnpacker.unpack_to_directory(
+            data, output_dir=output_dir, target_arch=target_arch
+        )
 
 
 

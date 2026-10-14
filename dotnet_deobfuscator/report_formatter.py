@@ -241,6 +241,30 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
     else:
         lines.append("  [-] No anti-dump memory corruptions detected.")
 
+    demux = report.get("native_demuxer", {})
+    lines.append("")
+    lines.append("--- [Native Multi-Architecture Resource Demuxer & Platform Router] ---")
+    if demux.get("detected") or demux.get("total_payloads", 0) > 0:
+        lines.append(f"  [+] Multi-Architecture Artifacts Detected! (Confidence: {demux.get('confidence', 'HIGH')})")
+        lines.append(f"      Total Payloads     : {demux.get('total_payloads', 0):,}")
+        lines.append(f"      Architectures      : {', '.join(demux.get('architectures_found', [])) or 'None'}")
+        lines.append(f"      Target Platforms   : {', '.join(demux.get('platforms_found', [])) or 'None'}")
+        lines.append(f"      Container Sources  : {', '.join(demux.get('sources_found', [])) or 'None'}")
+        if demux.get("has_architecture_mismatch"):
+            lines.append(f"  [!] Architecture Spoofing / Mismatch Detected: {demux.get('mismatch_count')} anomalies")
+            for anom in demux.get("anomalies", [])[:4]:
+                lines.append(f"        * {anom}")
+        for p in demux.get("payloads", [])[:6]:
+            mismatch_tag = " [!] MISMATCH" if p.get("mismatch_detected") else ""
+            lines.append(f"      -> {p.get('name')} ({p.get('size_bytes', 0):,} bytes, Arch: {p.get('target_arch')}{mismatch_tag})")
+            lines.append(f"         Format  : {p.get('format')} | Machine: {p.get('machine_hex')} | OS: {p.get('target_os')}")
+            lines.append(f"         SHA-256 : {p.get('sha256')}")
+        if len(demux.get("payloads", [])) > 6:
+            lines.append(f"      -> ... ({len(demux.get('payloads', [])) - 6} more native binaries)")
+        lines.append("  [+] Recommended Action    : Run with --demux-out <DIR> to carve & organize by architecture")
+    else:
+        lines.append("  [-] No native multi-architecture embedded resources detected.")
+
     pe_reb = report.get("pe_rebuilder", {})
 
     lines.append("")
