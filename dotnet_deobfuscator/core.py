@@ -18,17 +18,15 @@ from .unpackers.antidump import AntiDumpUnpacker
 from .unpackers.antidump_models import AntiDumpHealOptions, AntiDumpHealResult
 from .unpackers.native_demuxer import NativeDemuxerUnpacker
 from .rules import RuleFormat, RuleGranularity, RuleGenerationResult, ThreatRuleEngine
+from .mixed_mode import MixedModeAnalyzer, MixedModeAnalysisResult
 from .unpackers.armdot import ArmDotOpcodeTable, ArmDotUnpacker, ArmDotVMDisassembler
 from .unpackers.babel import BabelUnpacker
 from .unpackers.confuserex import ConfuserExUnpacker
 from .unpackers.costura import CosturaUnpacker
-from .unpackers.eazfuscator import EazfuscatorUnpacker
-from .unpackers.eazfuscator_vm import EazfuscatorVMDisassembler, VMOpcodeTable
-from .unpackers.antitamper import AntiTamperUnpacker
-from .unpackers.antitamper_jit import JITDumperInterface
+from .unpackers.eazfuscator import EazfuscatorUnpacker, EazfuscatorVMDisassembler, VMOpcodeTable
+from .unpackers.antitamper import AntiTamperUnpacker, JITDumperInterface
 from .unpackers.deepsea import DeepSeaUnpacker
-from .unpackers.intellilock import IntelliLockUnpacker
-from .unpackers.intellilock_models import HardwareProfile, VirtualLicense
+from .unpackers.intellilock import IntelliLockUnpacker, HardwareProfile, VirtualLicense
 from .unpackers.reactor import DotNetReactorUnpacker
 
 
@@ -125,38 +123,25 @@ class DotNetPackerCore:
             "sigma_rules": [s.title for s in threat_rules_res.sigma_rules],
         }
 
+        # 18. Native Mixed-Mode PE Forensics & CIL-Native Transition Tracer
+        mixed_mode_res = MixedModeAnalyzer.analyze(data, file_name=os.path.basename(file_path))
+        mixed_mode_telemetry = mixed_mode_res.telemetry.to_dict()
+
         return build_analysis_report(
-            file_path=file_path,
-            file_size=file_size,
-            elapsed_ms=elapsed_ms,
-            hashes=hashes,
-            assembly_info=assembly_info,
-            detected_protectors=detected_protectors,
-            pe_diag=pe_diag,
-            overlay_bytes=overlay_bytes,
-            pe_size=pe_size,
-            xor_result=xor_result,
-            costura_detect=costura_detect,
-            costura_payloads=costura_payloads,
-            confuser_detect=confuser_detect,
-            confuser_payloads=confuser_payloads,
+            file_path=file_path, file_size=file_size, elapsed_ms=elapsed_ms,
+            hashes=hashes, assembly_info=assembly_info, detected_protectors=detected_protectors,
+            pe_diag=pe_diag, overlay_bytes=overlay_bytes, pe_size=pe_size, xor_result=xor_result,
+            costura_detect=costura_detect, costura_payloads=costura_payloads,
+            confuser_detect=confuser_detect, confuser_payloads=confuser_payloads,
             confuser_strings_list=confuser_strings_list,
-            reactor_detect=reactor_detect,
-            reactor_payloads=reactor_payloads,
-            reactor_methods=reactor_methods,
-            eaz_detect=eaz_detect,
-            eaz_containers=eaz_containers,
-            babel_detect=babel_detect,
-            babel_merged=babel_merged,
-            armdot_detect=armdot_detect,
-            armdot_containers=armdot_containers,
-            intellilock_detect=intellilock_detect,
-            deepsea_detect=deepsea_detect,
-            antitamper_detect=antitamper_detect,
-            antidump_detect=antidump_detect,
-            native_demux_detect=native_demux_detect,
-            native_demux_payloads=native_demux_payloads,
-            threat_rules_telemetry=threat_rules_telemetry,
+            reactor_detect=reactor_detect, reactor_payloads=reactor_payloads, reactor_methods=reactor_methods,
+            eaz_detect=eaz_detect, eaz_containers=eaz_containers,
+            babel_detect=babel_detect, babel_merged=babel_merged,
+            armdot_detect=armdot_detect, armdot_containers=armdot_containers,
+            intellilock_detect=intellilock_detect, deepsea_detect=deepsea_detect,
+            antitamper_detect=antitamper_detect, antidump_detect=antidump_detect,
+            native_demux_detect=native_demux_detect, native_demux_payloads=native_demux_payloads,
+            threat_rules_telemetry=threat_rules_telemetry, mixed_mode_telemetry=mixed_mode_telemetry,
         )
 
 
@@ -698,3 +683,15 @@ class DotNetPackerCore:
             input_path, granularity=granularity, rule_format=rule_format, options=options
         )
         return ThreatRuleEngine.export_to_directory(res, output_dir=output_dir)
+
+    @classmethod
+    def analyze_mixed_mode(cls, input_path: str) -> MixedModeAnalysisResult:
+        """Performs static forensic inspection of PE binary for mixed-mode traits."""
+        return MixedModeAnalyzer.analyze_file(input_path)
+
+    @classmethod
+    def export_mixed_mode(cls, input_path: str, output_dir: str) -> Dict[str, Any]:
+        """Analyzes mixed-mode PE and exports manifests, transitions, and VTFixup tables."""
+        res = cls.analyze_mixed_mode(input_path)
+        return MixedModeAnalyzer.export_to_directory(res, output_dir=output_dir)
+

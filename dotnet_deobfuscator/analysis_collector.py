@@ -38,6 +38,7 @@ def build_analysis_report(
     native_demux_detect: Optional[Dict[str, Any]] = None,
     native_demux_payloads: Optional[List[Dict[str, Any]]] = None,
     threat_rules_telemetry: Optional[Dict[str, Any]] = None,
+    mixed_mode_telemetry: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Assembles all subsystem forensic findings into a unified analysis report dictionary."""
     return {
@@ -228,5 +229,22 @@ def build_analysis_report(
             "synthesized": False,
             "yara_count": 0,
             "sigma_count": 0,
+        },
+        "mixed_mode": mixed_mode_telemetry or {
+            "is_mixed_mode": False,
+            "mixed_mode_type": "pure_managed",
+            "confidence": "HIGH",
+            "cor20_flags": [],
+            "has_native_entrypoint": False,
+            "vtfixup_tables_count": 0,
+            "total_vtfixup_slots": 0,
+            "from_unmanaged_slots_count": 0,
+            "unmanaged_exports_count": 0,
+            "bridged_exports_count": 0,
+            "tls_callbacks_count": 0,
+            "transitions_count": 0,
+            "anomalies": [],
+            "risk_score": 0,
+            "risk_severity": "informational",
         },
     }

@@ -289,6 +289,27 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
         for sr in threat_rules.get("sigma_rules", [])[:4]:
             lines.append(f"      * Sigma: {sr}")
 
+    mixed = report.get("mixed_mode", {})
+    lines.append("")
+    lines.append("--- [Native Mixed-Mode Forensics & CIL-Native Transition Tracer] ---")
+    if mixed.get("is_mixed_mode"):
+        lines.append(f"  [+] Mixed-Mode Assembly Detected! (Type: {mixed.get('mixed_mode_type')}, Confidence: {mixed.get('confidence', 'HIGH')})")
+        lines.append(f"      Risk Assessment    : {mixed.get('risk_severity', 'MEDIUM').upper()} (Score: {mixed.get('risk_score', 0)}/100)")
+        lines.append(f"      Cor20 Flags        : {', '.join(mixed.get('cor20_flags', [])) or 'None'}")
+        if mixed.get("has_native_entrypoint"):
+            lines.append(f"      Native EntryPoint  : RVA {hex(mixed.get('native_entrypoint_rva', 0))} (Executes before CLR bootstrap)")
+        lines.append(f"      VTableFixup Tables : {mixed.get('vtfixup_tables_count', 0)} ({mixed.get('total_vtfixup_slots', 0)} slots, {mixed.get('from_unmanaged_slots_count', 0)} unmanaged thunks)")
+        if mixed.get("bridged_exports_count", 0) > 0:
+            lines.append(f"      Bridged Exports    : {mixed.get('bridged_exports_count', 0)} / {mixed.get('unmanaged_exports_count', 0)} total exports")
+        if mixed.get("tls_callbacks_count", 0) > 0:
+            lines.append(f"  [!] Native TLS Callbacks Identified: {mixed.get('tls_callbacks_count', 0)} pre-runtime execution hooks")
+        if mixed.get("anomalies"):
+            for anom in mixed.get("anomalies", [])[:4]:
+                lines.append(f"      * {anom}")
+        lines.append("  [+] Recommended Action : Run with --trace-transitions to inspect execution boundary hops")
+    else:
+        lines.append(f"  [-] Standard {mixed.get('mixed_mode_type', 'pure_managed')} PE binary (no mixed-mode CIL-native transitions).")
+
     if verbose and report.get("sections"):
         lines.append("")
         lines.append("--- [Section Topology & Entropy] ---")
