@@ -42,139 +42,79 @@ def build_parser() -> argparse.ArgumentParser:
         help="Extract and dump decrypted ConfuserEx constants and literal strings",
     )
     parser.add_argument(
-        "--rebuild",
-        action="store_true",
+        "--rebuild", action="store_true",
         help="Reconstruct damaged PE headers, realign sections, and repair standalone binary",
     )
+    parser.add_argument("--rebuild-out", help="Output destination path for rebuilt PE binary")
     parser.add_argument(
-        "--rebuild-out",
-        help="Output destination path for rebuilt PE binary",
-    )
-    parser.add_argument(
-        "--unmap-dump",
-        action="store_true",
+        "--unmap-dump", action="store_true",
         help="Force process memory dump unmapping (realign RVA mapped sections to disk raw offsets)",
     )
     parser.add_argument(
-        "--strip-envelope",
-        action="store_true",
+        "--strip-envelope", action="store_true",
         help="Strip native wrapper envelope and carve encapsulated managed .NET assembly",
     )
+    parser.add_argument("--envelope-out", help="Destination path for de-enveloped managed assembly binary")
     parser.add_argument(
-        "--envelope-out",
-        help="Destination path for de-enveloped managed assembly binary",
-    )
-    parser.add_argument(
-        "--restore-necrobit",
-        action="store_true",
+        "--restore-necrobit", action="store_true",
         help="Decrypt NecroBit CIL method bodies and reconstruct deobfuscated assembly",
     )
+    parser.add_argument("--necrobit-out", help="Destination path for NecroBit restored assembly binary")
     parser.add_argument(
-        "--necrobit-out",
-        help="Destination path for NecroBit restored assembly binary",
-    )
-    parser.add_argument(
-        "--necrobit-seed",
-        type=lambda x: int(x, 0),
-        default=0x14725836,
+        "--necrobit-seed", type=lambda x: int(x, 0), default=0x14725836,
         help="Decryption seed integer for NecroBit PRNG stream cipher (default: 0x14725836)",
     )
     parser.add_argument(
-        "--devirtualize-eaz",
-        action="store_true",
+        "--devirtualize-eaz", action="store_true",
         help="De-virtualize Eazfuscator.NET VM methods and reconstruct assembly",
     )
+    parser.add_argument("--eaz-out", help="Destination path for devirtualized assembly binary")
     parser.add_argument(
-        "--eaz-out",
-        help="Destination path for devirtualized assembly binary",
-    )
-    parser.add_argument(
-        "--disasm-vm",
-        action="store_true",
+        "--disasm-vm", action="store_true",
         help="Disassemble Eazfuscator VM bytecode containers to formatted assembly",
     )
+    parser.add_argument("--vm-table", help="Custom VM opcode table JSON configuration file path")
     parser.add_argument(
-        "--vm-table",
-        help="Custom VM opcode table JSON configuration file path",
-    )
-    parser.add_argument(
-        "--devirtualize-armdot",
-        action="store_true",
+        "--devirtualize-armdot", action="store_true",
         help="De-virtualize ArmDot VM methods and reconstruct assembly",
     )
+    parser.add_argument("--armdot-out", help="Destination path for ArmDot devirtualized assembly binary")
     parser.add_argument(
-        "--armdot-out",
-        help="Destination path for ArmDot devirtualized assembly binary",
-    )
-    parser.add_argument(
-        "--disasm-armdot",
-        action="store_true",
+        "--disasm-armdot", action="store_true",
         help="Disassemble ArmDot VM bytecode containers to formatted assembly",
     )
+    parser.add_argument("--armdot-table", help="Custom ArmDot VM opcode table JSON configuration file path")
     parser.add_argument(
-        "--armdot-table",
-        help="Custom ArmDot VM opcode table JSON configuration file path",
-    )
-    parser.add_argument(
-        "--demangle-babel",
-        action="store_true",
+        "--demangle-babel", action="store_true",
         help="Demangle Babel Obfuscator symbols and reconstruct dependency graph",
     )
+    parser.add_argument("--babel-out", help="Destination path for demangled assembly binary")
     parser.add_argument(
-        "--babel-out",
-        help="Destination path for demangled assembly binary",
-    )
-    parser.add_argument(
-        "--export-depgraph",
-        action="store_true",
+        "--export-depgraph", action="store_true",
         help="Export inter-assembly dependency graph in JSON, Graphviz DOT, and Mermaid formats",
     )
+    parser.add_argument("--custom-map", help="Path to external Babel mapping file (XML, JSON, or text format)")
     parser.add_argument(
-        "--custom-map",
-        help="Path to external Babel mapping file (XML, JSON, or text format)",
-    )
-    parser.add_argument(
-        "--strip-intellilock",
-        action="store_true",
+        "--strip-intellilock", action="store_true",
         help="Strip IntelliLock licensing envelope and restore original managed assembly",
     )
+    parser.add_argument("--intellilock-out", help="Destination path for unlocked assembly binary")
     parser.add_argument(
-        "--intellilock-out",
-        help="Destination path for unlocked assembly binary",
-    )
-    parser.add_argument(
-        "--bypass-hwlock",
-        action="store_true",
+        "--bypass-hwlock", action="store_true",
         help="Generate synthetic hardware license to bypass hardware locking and trial expiration",
     )
     parser.add_argument(
-        "--gen-license",
-        action="store_true",
+        "--gen-license", action="store_true",
         help="Generate a valid synthetic perpetual master license (.lic) file",
     )
+    parser.add_argument("--license-out", help="Destination file path for generated synthetic license (.lic)")
     parser.add_argument(
-        "--license-out",
-        help="Destination file path for generated synthetic license (.lic)",
-    )
-    parser.add_argument(
-        "--deflatten-deepsea",
-        action="store_true",
+        "--deflatten-deepsea", action="store_true",
         help="De-flatten DeepSea control flow distortion and reconstruct clean CIL methods",
     )
-    parser.add_argument(
-        "--deepsea-out",
-        help="Destination path for de-flattened assembly binary",
-    )
-    parser.add_argument(
-        "--export-ast",
-        action="store_true",
-        help="Export high-level Abstract Syntax Tree (AST) in JSON format",
-    )
-    parser.add_argument(
-        "--export-cfg",
-        action="store_true",
-        help="Export de-flattened Control Flow Graph (CFG) in Graphviz DOT format",
-    )
+    parser.add_argument("--deepsea-out", help="Destination path for de-flattened assembly binary")
+    parser.add_argument("--export-ast", action="store_true", help="Export high-level Abstract Syntax Tree (AST) in JSON format")
+    parser.add_argument("--export-cfg", action="store_true", help="Export de-flattened Control Flow Graph (CFG) in Graphviz DOT format")
     parser.add_argument(
         "--anti-tamper",
         action="store_true",
@@ -275,17 +215,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Threat rule granularity level (specific, behavioral, or hunt, default: behavioral)",
     )
     parser.add_argument(
-        "--format",
-        choices=["text", "json"],
-        default="text",
-        help="Telemetry format (text or json)",
+        "--mixed-mode", action="store_true",
+        help="Analyze mixed-mode C++/CLI characteristics and VTableFixup tables",
     )
     parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Display verbose section metrics"
+        "--trace-transitions", action="store_true",
+        help="Trace execution boundary hops between unmanaged native code and managed CIL",
     )
     parser.add_argument(
-        "--version", action="version", version=f"%(prog)s {__version__}"
+        "--mixed-mode-out",
+        help="Directory path to export mixed-mode analysis manifest, transitions, and VTFixup tables",
     )
+    parser.add_argument(
+        "--format", choices=["text", "json"], default="text", help="Telemetry format (text or json)"
+    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Display verbose section metrics")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return parser
 
 
@@ -680,6 +625,24 @@ def main(argv: Optional[list] = None) -> int:
                 sys.stdout.write(f"[+] Exported {len(exp_res['exported_files'])} rule files to -> {args.rules_out}\n")
         except Exception as e:
             sys.stderr.write(f"[-] Threat rule synthesis failed: {e}\n")
+
+    # Native Mixed-Mode C++/CLI (IJWH) Forensics & Transition Tracer
+    if args.mixed_mode or args.trace_transitions or args.mixed_mode_out:
+        try:
+            mm_res = DotNetPackerCore.analyze_mixed_mode(args.target)
+            sys.stdout.write(
+                f"[+] Mixed-Mode Inspection: {mm_res.telemetry.mixed_mode_type} (Risk: {mm_res.telemetry.risk_severity.upper()}, Score: {mm_res.telemetry.risk_score}/100)\n"
+            )
+            if args.trace_transitions:
+                sys.stdout.write(f"\n--- [CIL <-> Native Boundary Transitions: {len(mm_res.transitions)}] ---\n")
+                for tr in mm_res.transitions:
+                    sys.stdout.write(f"  [{tr.transition_id}] {tr.direction.value.upper()}: {tr.source_location} -> {tr.target_location}\n")
+                    sys.stdout.write(f"     Description: {tr.description}\n")
+            if args.mixed_mode_out:
+                exp_mm = DotNetPackerCore.export_mixed_mode(args.target, output_dir=args.mixed_mode_out)
+                sys.stdout.write(f"[+] Exported {len(exp_mm['exported_files'])} mixed-mode forensic files to -> {args.mixed_mode_out}\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] Mixed-mode analysis failed: {e}\n")
 
     if args.format == "json":
         sys.stdout.write(json.dumps(report, indent=2) + "\n")

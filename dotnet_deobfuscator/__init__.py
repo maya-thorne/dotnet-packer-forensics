@@ -122,8 +122,27 @@ from .rules import (
     YARASynthesizer,
     SigmaSynthesizer,
 )
+from .mixed_mode import (
+    CILNativeTransition,
+    Cor20Flag,
+    MixedModeAnalysisResult,
+    MixedModeAnalyzer,
+    MixedModeTelemetry,
+    MixedModeType,
+    RiskSeverity,
+    TLSCallbackInfo,
+    TransitionDirection,
+    TransitionType,
+    UnmanagedExportBridge,
+    VTFixupFlag,
+    VTFixupParser,
+    VTFixupSlot,
+    VTFixupTable,
+    VTFixupType,
+    zeroize_buffer,
+)
 
-__version__ = "2.4.0"
+__version__ = "2.5.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -224,6 +243,24 @@ __all__ = [
     "RuleGenerationResult",
     "YARARule",
     "SigmaRule",
+    "MixedModeAnalyzer",
+    "MixedModeAnalysisResult",
+    "MixedModeTelemetry",
+    "MixedModeType",
+    "VTFixupParser",
+    "VTFixupTable",
+    "VTFixupSlot",
+    "VTFixupType",
+    "VTFixupFlag",
+    "Cor20Flag",
+    "TransitionTracer",
+    "CILNativeTransition",
+    "UnmanagedExportBridge",
+    "TLSCallbackInfo",
+    "TransitionDirection",
+    "TransitionType",
+    "RiskSeverity",
+    "zeroize_buffer",
     "__version__",
 ]
 

@@ -142,6 +142,9 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `--gen-sigma` | Synthesize and display Sigma detection rules for target binary | `False` |
 | `--rules-out` | Directory path to export synthesized YARA/Sigma rules and manifest | None |
 | `--rule-level` | Threat rule granularity level (`specific`, `behavioral`, `hunt`) | `behavioral` |
+| `--mixed-mode` | Execute native C++/CLI mixed-mode PE analysis and transition tracing | `False` |
+| `--trace-transitions` | Trace native TLS callbacks, entry points, and export thunks | `False` |
+| `--mixed-mode-out` | Output directory for carved native transition telemetry & manifest | None |
 | `--rebuild` | Reconstruct damaged PE headers, realign sections, and repair standalone binary | `False` |
 | `--rebuild-out` | Output destination path for rebuilt PE binary | None |
 | `--unmap-dump` | Force process memory dump unmapping (realign RVA mapped sections to disk raw offsets) | `False` |
@@ -152,7 +155,7 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v2.4.0` |
+| `--version` | Display engine version and exit | `v2.5.0` |
 
 
 </details>
@@ -422,6 +425,26 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><b>Threat Rule Engine Facade</b></td>
       <td>Orchestrates feature extraction, rule synthesis, and safe directory exports with path traversal defenses.</td>
     </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/mixed_mode/models.py</code></td>
+      <td><b>Mixed-Mode Models &amp; Enums</b></td>
+      <td>Encapsulates MixedModeType, VTFixupSlot, VTFixupTable, CILNativeTransition, and telemetry manifest models.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/mixed_mode/vtfixup_parser.py</code></td>
+      <td><b>VTable Fixup Table Parser</b></td>
+      <td>Decodes IMAGE_COR_VTABLEFIXUP headers, parses 32/64-bit slot tokens, and zeroes scratchpad buffers via ctypes.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/mixed_mode/transition_tracer.py</code></td>
+      <td><b>CIL-Native Boundary Tracer</b></td>
+      <td>Traces unmanaged entrypoint bootstrap jumps, native TLS callbacks, export thunk hops, and P/Invoke boundaries.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/mixed_mode/analyzer.py</code></td>
+      <td><b>Mixed-Mode Analyzer &amp; Exporter</b></td>
+      <td>Orchestrates PE/Cor20 inspection, threat risk scoring, and safe directory exports with path traversal defenses.</td>
+    </tr>
   </tbody>
 </table>
 
@@ -536,6 +559,26 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>tests/test_antitamper_unpacker.py</code></td>
       <td><b>Anti-Tamper &amp; JIT Dumper Test</b></td>
       <td>Validates CorILMethod Tiny/Fat serialization, PRNG stream decryption, JIT dumper ingestion (JSON/binary stream), anti-tamper heuristics, PE section synthesis, and CLI flags.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_antidump_healer.py</code></td>
+      <td><b>Anti-Dump Healer &amp; Scylla Normalizer Test</b></td>
+      <td>Validates DOS/NT header repairs, Scylla dump unmapping, BSJB scanning, Cor20Header recovery, IAT synthesis, and directory exports.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_native_demuxer.py</code></td>
+      <td><b>Native Multi-Arch Demuxer &amp; Platform Router Test</b></td>
+      <td>Validates PE/ELF/Mach-O machine parsing, buffer zeroization, DeflateStream decompression, multi-arch carving, spoofing detection, and platform loader routing.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_rule_generator.py</code></td>
+      <td><b>Automated Threat Hunting Rule Generator Test</b></td>
+      <td>Validates feature extraction, PE imphash, Shannon entropy, Specific/Behavioral/Hunt YARA rules, Sigma YAML and UUID v5 validation, and directory exports.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_mixed_mode.py</code></td>
+      <td><b>Native Mixed-Mode PE &amp; Transition Tracer Test</b></td>
+      <td>Validates pure managed/native/IJWH classification, native entry points, 32/64-bit VTFixups, unmanaged export bridges, TLS callbacks, risk scoring, safe exports, and CLI flags.</td>
     </tr>
   </tbody>
 </table>

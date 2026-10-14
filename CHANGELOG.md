@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2026-10-14
+
+### Added
+- **Native Mixed-Mode PE Static Analyzer & CIL-Native Transition Tracer (`dotnet_deobfuscator.mixed_mode`)**:
+  - Dedicated mixed-mode (IJWH / C++/CLI) binary forensics engine detecting and classifying execution models across pure managed (`CLR_ILONLY`), mixed-mode, pure native, and anomalous PE executables.
+  - VTable Fixup Table parser (`VTFixupParser`) decoding `IMAGE_COR_VTABLEFIXUP` header arrays, extracting entry point tokens (`MethodDef`, `MemberRef`, `MethodSpec`), resolving slot bit-widths (`COR_VTABLE_32BIT`, `COR_VTABLE_64BIT`), and validating call transition thunks (`COR_VTABLE_FROM_UNMANAGED`, `COR_VTABLE_CALL_MOST_DERIVED`).
+  - CIL-Native execution boundary tracer (`TransitionTracer`) mapping unmanaged entrypoint bootstrap jumps, native TLS callback tables (`IMAGE_DIRECTORY_ENTRY_TLS`), unmanaged export thunks bridging into managed metadata tokens, and P/Invoke marshalling thunks.
+  - Multi-factor threat risk scoring engine (`MixedModeAnalyzer.calculate_risk_score`) identifying security anomalies, stealth native execution branches, concealed managed payloads, and unsigned TLS callbacks.
+  - Safe forensic artifact exporter (`export_to_directory`) generating structured transition manifests (`mixed_mode_manifest.json`), unmanaged export tables (`vtfixup_exports.json`), and TLS telemetry with strict directory traversal sanitization (`_safe_path`).
+  - Memory zeroization (`zeroize_buffer`) using `ctypes.memset` to scrub intermediate byte arrays, unpacked fixup slots, and parsed token structures from process memory.
+- **CLI & Core Orchestrator Integration**:
+  - Added `--mixed-mode` CLI flag to trigger static mixed-mode PE analysis and print diagnostic telemetry to stdout.
+  - Added `--trace-transitions` CLI flag to trace native entrypoints, TLS callbacks, and unmanaged export bridges.
+  - Added `--mixed-mode-out <DIR>` CLI flag to export structured JSON manifests and analysis diagnostics to disk.
+  - Integrated mixed-mode forensics telemetry into `DotNetPackerCore.analyze_file`, `DotNetPackerCore.analyze_mixed_mode`, `DotNetPackerCore.export_mixed_mode`, `analysis_collector.py`, and `report_formatter.py`.
+- **Comprehensive Mixed-Mode Test Suite (`tests/test_mixed_mode.py`)**:
+  - 12 dedicated unit and integration test cases covering pure managed, pure native, mixed-mode IJWH, native entrypoint detection, 32/64-bit VTFixup parsing, unmanaged export bridges, TLS callbacks, risk scoring, safe directory exports, and CLI execution (expanding total test suite to 268 passing tests).
+
 ## [2.4.0] - 2026-10-14
 
 ### Added
