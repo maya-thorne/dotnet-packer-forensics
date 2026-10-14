@@ -10,6 +10,7 @@ import os
 import shutil
 import struct
 import tempfile
+from typing import Any, Dict, List, Optional, Tuple, Union
 import unittest
 
 from dotnet_deobfuscator.cli import main
