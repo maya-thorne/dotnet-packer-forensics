@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-10-14
+
+### Added
+- **Automated Threat Hunting YARA & Sigma Rule Synthesizer (`dotnet_deobfuscator.rules`)**:
+  - Modular threat rule synthesis engine generating production-ready detection rules in YARA v4+ and Sigma v2 YAML formats from static binary forensics.
+  - Threat feature extraction engine (`ThreatFeatureExtractor`) capturing binary hashes (SHA-256, SHA-1, MD5), PE imphash, section topology and Shannon entropies, CLR Cor20Header and BSJB metadata streams, CIL bytecode pattern signatures, and detected protector tokens.
+  - Multi-tier YARA rule generator (`YARASynthesizer`) synthesizing pristine rules across Specific (exact file size bounds, cryptographic hashes, section counts, unique bytecodes), Behavioral (protector family rules targeting ConfuserEx, .NET Reactor, Costura, Eazfuscator, Babel, ArmDot, IntelliLock, DeepSea, xorPacker overlay), and Threat Hunting tiers (high-entropy non-resource sections via `math.entropy`, anti-dump header corruptions, multi-architecture carriers).
+  - Spec-compliant Sigma v2 rule generator (`SigmaSynthesizer`) emitting valid YAML definitions for Process Creation (Event ID 4688 / Sysmon 1), File Creation / Drop (Sysmon 11), and Image Load (Sysmon 7) events with deterministic UUID v5 identifiers and MITRE ATT&CK taxonomy tags (`attack.defense_evasion`, `attack.t1027`, `attack.t1027.002`, `attack.execution`).
+  - Unified orchestration facade (`ThreatRuleEngine`) providing single-call synthesis from raw bytes or files, and safe export pipeline (`export_to_directory`) organizing rules into `.yar`, `.yml`, and structured `rules_manifest.json` files with strict directory traversal validation (`_safe_path`).
+  - Cryptographic buffer zeroizing (`zeroize_buffer`) utilizing `ctypes.memset` to scrub in-memory decryption scratchpads and feature extraction buffers.
+- **CLI & Core Orchestrator Integration**:
+  - Added `--gen-rules` flag to synthesize both YARA and Sigma rules and print them to stdout.
+  - Added `--gen-yara` and `--gen-sigma` flags for standalone rule format synthesis.
+  - Added `--rule-level <specific|behavioral|hunt>` to configure rule granularity and strictness.
+  - Added `--rules-out <DIR>` flag to export formatted rule files and JSON manifest to a target directory.
+  - Integrated automated behavioral rule telemetry into `DotNetPackerCore.analyze_file`, `analysis_collector.py`, and `report_formatter.py`.
+- **Comprehensive Rule Generator Test Suite (`tests/test_rule_generator.py`)**:
+  - 13 dedicated unit and integration test cases covering feature extraction, PE imphash calculation, Shannon entropy verification, specific/behavioral/hunting YARA rule generation, Sigma YAML formatting and UUID v5 validation, buffer memory wiping via `ctypes.memset`, directory traversal defenses, core orchestrator methods, and CLI command-line execution (expanding total suite to 256 passing tests).
+
 ## [2.3.0] - 2026-10-14
 
 ### Added

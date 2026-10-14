@@ -20,9 +20,9 @@ This document tracks shipped capabilities and future engineering milestones for 
 - [x] **CLI Metadata Anti-Tamper Heuristics & In-Memory JIT Dumper Engine** — ECMA-335 CorILMethod Tiny/Fat header parser and serializer, PRNG/LCG stream cipher decryption with cryptographic buffer zeroizing, JIT dumper ingestion interface supporting in-memory scans, structured JSON descriptors, and binary JITD streams, static anti-tamper detection across corrupted `#~`/`#-` tables, PE `.antitamper` section injection, and safe directory extraction with 26 dedicated unit tests.
 - [x] **Anti-Dump Process Memory PE Header Healer & Scylla Dump Normalizer** — Heuristic detection and classification of anti-dump corruptions, Scylla process memory dump unmapping (aligning virtual addresses to file offsets), BSJB CLR metadata scanning, ECMA-335 Cor20Header recovery and synthesis, standard mscoree.dll CLR import table (IAT) reconstruction, section table name sanitization and synthesis, and safe directory extraction with 16 dedicated unit tests.
 - [x] **Native Multi-Architecture Resource Demuxer & Platform Router** — Static identification, carving, and decompression of multiplexed native PE/ELF/Mach-O binaries (x86, x64, ARM64, ARM, IA64) across manifest resources, directory structures, and PE sections. Includes automated architecture spoofing and mismatch detection, realistic runtime loader routing simulation (WoW64 compatibility, Windows on ARM x64/x86 emulation, macOS Rosetta 2 translation), memory buffer wiping via ctypes zeroization, and safe architecture-partitioned directory extraction with 14 dedicated unit tests (243 total suite tests).
+- [x] **Automated .NET Threat Hunting YARA & Sigma Signature Rule Synthesizer** — Dynamic synthesis of production-ready YARA v4+ detection rules (with `import "pe"` and `import "math"` conditions, PE/CLR structural attributes, CIL opcode patterns, protector markers) and Sigma v2 YAML rules (process creation, file drop, and CLR image load telemetry). Supports Specific, Behavioral, and Threat Hunting tiers, deterministic UUID v5 generation, memory zeroization, safe directory export, and CLI automation with 13 dedicated unit tests (256 total suite tests).
 
 ---
-
 
 ## Planned Milestones
 
@@ -37,3 +37,6 @@ This document tracks shipped capabilities and future engineering milestones for 
 - [ ] **JIT Compiler Method Hooking Interceptor & Emulation Bridge** — Static emulation of native JIT hooks and ICorJitCompiler transitions.
 - [ ] **Opaque Predicate Algebraic Simplification & SMT Solver Engine** — Elimination of complex identity-based dead code branches.
 - [ ] **Multi-Layer Steganographic PE Slack & High-Entropy Chunk Carver** — Extraction of hidden nested payloads within PE alignment gaps.
+- [ ] **.NET 9 AppHost Native Runtime Bundle Decompressor & DLL/PDB Volume Mounter** — Virtual filesystem extraction for modern single-file hosts.
+- [ ] **CIL Control Flow Graph Virtual Branch State Machine Detangler** — Normalization of non-linear nested loop switch dispatchers.
+- [ ] **Enterprise SOC Real-Time YARA-L 2.0 & Falcon Sensor Query Engine** — Cloud SIEM/EDR detection rule synthesis.

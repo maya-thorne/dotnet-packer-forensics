@@ -279,6 +279,16 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
     else:
         lines.append("  [+] PE Structural Status  : HEALTHY (Valid headers and aligned sections)")
 
+    threat_rules = report.get("threat_hunting_rules", {})
+    if threat_rules.get("synthesized"):
+        lines.append("")
+        lines.append("--- [Threat Hunting Rules Synthesis (YARA & Sigma)] ---")
+        lines.append(f"  [+] Rules Synthesized: {threat_rules.get('yara_count', 0)} YARA / {threat_rules.get('sigma_count', 0)} Sigma (Granularity: {threat_rules.get('granularity', 'BEHAVIORAL').upper()})")
+        for yr in threat_rules.get("yara_rules", [])[:4]:
+            lines.append(f"      * YARA: {yr}")
+        for sr in threat_rules.get("sigma_rules", [])[:4]:
+            lines.append(f"      * Sigma: {sr}")
+
     if verbose and report.get("sections"):
         lines.append("")
         lines.append("--- [Section Topology & Entropy] ---")

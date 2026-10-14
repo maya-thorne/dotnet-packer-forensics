@@ -10,21 +10,15 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from .analysis_collector import build_analysis_report
 from .dotnet_analyzer import DotNetAnalyzer
-from .payload_verifier import (
-    PayloadVerificationResult,
-    PayloadVerifier,
-)
+from .payload_verifier import PayloadVerificationResult, PayloadVerifier
 from .pe_overlay import PEOverlayParser
 from .pe_rebuilder import PERebuilder, PERebuildOptions, PERebuildReport
 from .signatures import ProtectorSignatures
 from .unpackers.antidump import AntiDumpUnpacker
 from .unpackers.antidump_models import AntiDumpHealOptions, AntiDumpHealResult
 from .unpackers.native_demuxer import NativeDemuxerUnpacker
-from .unpackers.armdot import (
-    ArmDotOpcodeTable,
-    ArmDotUnpacker,
-    ArmDotVMDisassembler,
-)
+from .rules import RuleFormat, RuleGranularity, RuleGenerationResult, ThreatRuleEngine
+from .unpackers.armdot import ArmDotOpcodeTable, ArmDotUnpacker, ArmDotVMDisassembler
 from .unpackers.babel import BabelUnpacker
 from .unpackers.confuserex import ConfuserExUnpacker
 from .unpackers.costura import CosturaUnpacker
@@ -118,6 +112,19 @@ class DotNetPackerCore:
         # 16. Cryptographic Hashes & Integrity Baselines
         hashes = PayloadVerifier.compute_hashes(data)
 
+        # 17. Automated Threat Hunting Rule Synthesis (Behavioral Baseline)
+        threat_rules_res = ThreatRuleEngine.synthesize_from_bytes(
+            data, file_name=os.path.basename(file_path), granularity=RuleGranularity.BEHAVIORAL
+        )
+        threat_rules_telemetry = {
+            "synthesized": True,
+            "granularity": threat_rules_res.granularity.value,
+            "yara_count": len(threat_rules_res.yara_rules),
+            "sigma_count": len(threat_rules_res.sigma_rules),
+            "yara_rules": [r.rule_name for r in threat_rules_res.yara_rules],
+            "sigma_rules": [s.title for s in threat_rules_res.sigma_rules],
+        }
+
         return build_analysis_report(
             file_path=file_path,
             file_size=file_size,
@@ -149,6 +156,7 @@ class DotNetPackerCore:
             antidump_detect=antidump_detect,
             native_demux_detect=native_demux_detect,
             native_demux_payloads=native_demux_payloads,
+            threat_rules_telemetry=threat_rules_telemetry,
         )
 
 
@@ -660,5 +668,33 @@ class DotNetPackerCore:
             data, output_dir=output_dir, target_arch=target_arch
         )
 
+    @classmethod
+    def generate_threat_rules(
+        cls,
+        input_path: str,
+        granularity: str = "behavioral",
+        rule_format: str = "combined",
+        options: Optional[Dict[str, Any]] = None,
+    ) -> RuleGenerationResult:
+        """Synthesizes dynamic YARA and Sigma rules from input binary."""
+        return ThreatRuleEngine.synthesize_from_file(
+            input_path,
+            granularity=RuleGranularity(granularity.lower()),
+            rule_format=RuleFormat(rule_format.lower()),
+            options=options,
+        )
 
-
+    @classmethod
+    def export_threat_rules(
+        cls,
+        input_path: str,
+        output_dir: str,
+        granularity: str = "behavioral",
+        rule_format: str = "combined",
+        options: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Synthesizes and exports detection rules and JSON manifest to target directory."""
+        res = cls.generate_threat_rules(
+            input_path, granularity=granularity, rule_format=rule_format, options=options
+        )
+        return ThreatRuleEngine.export_to_directory(res, output_dir=output_dir)
