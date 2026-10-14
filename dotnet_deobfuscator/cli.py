@@ -250,6 +250,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="Enforce strict PE header bounds and treat structural warnings as failures",
     )
     parser.add_argument(
+        "--gen-rules",
+        action="store_true",
+        help="Synthesize automated threat hunting YARA and Sigma detection rules",
+    )
+    parser.add_argument(
+        "--gen-yara",
+        action="store_true",
+        help="Synthesize and display YARA detection rules for target binary",
+    )
+    parser.add_argument(
+        "--gen-sigma",
+        action="store_true",
+        help="Synthesize and display Sigma detection rules for target binary",
+    )
+    parser.add_argument(
+        "--rules-out",
+        help="Directory path to export synthesized YARA/Sigma rules and manifest",
+    )
+    parser.add_argument(
+        "--rule-level",
+        choices=["specific", "behavioral", "hunt"],
+        default="behavioral",
+        help="Threat rule granularity level (specific, behavioral, or hunt, default: behavioral)",
+    )
+    parser.add_argument(
         "--format",
         choices=["text", "json"],
         default="text",
@@ -625,6 +650,36 @@ def main(argv: Optional[list] = None) -> int:
                 sys.stdout.write(f"[+] Successfully extracted unpacked payload -> {args.output}\n")
             else:
                 sys.stderr.write("[-] Failed to extract unpacked payload.\n")
+
+    # Automated Threat Hunting Rule Synthesis (YARA & Sigma)
+    if args.gen_rules or args.gen_yara or args.gen_sigma or args.rules_out:
+        rule_fmt = "combined"
+        if args.gen_yara and not (args.gen_sigma or args.gen_rules):
+            rule_fmt = "yara"
+        elif args.gen_sigma and not (args.gen_yara or args.gen_rules):
+            rule_fmt = "sigma"
+
+        try:
+            rule_res = DotNetPackerCore.generate_threat_rules(
+                args.target, granularity=args.rule_level, rule_format=rule_fmt
+            )
+            sys.stdout.write(
+                f"[+] Synthesized {len(rule_res.yara_rules)} YARA & {len(rule_res.sigma_rules)} Sigma rules ({args.rule_level.upper()} level)\n"
+            )
+            if args.gen_yara or (args.gen_rules and not args.rules_out):
+                for yr in rule_res.yara_rules:
+                    sys.stdout.write(f"\n--- [YARA: {yr.rule_name}] ---\n{yr.to_yara_string()}\n")
+            if args.gen_sigma or (args.gen_rules and not args.rules_out):
+                for sr in rule_res.sigma_rules:
+                    sys.stdout.write(f"\n--- [SIGMA: {sr.title}] ---\n{sr.to_sigma_yaml()}\n")
+
+            if args.rules_out:
+                exp_res = DotNetPackerCore.export_threat_rules(
+                    args.target, output_dir=args.rules_out, granularity=args.rule_level, rule_format=rule_fmt
+                )
+                sys.stdout.write(f"[+] Exported {len(exp_res['exported_files'])} rule files to -> {args.rules_out}\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] Threat rule synthesis failed: {e}\n")
 
     if args.format == "json":
         sys.stdout.write(json.dumps(report, indent=2) + "\n")

@@ -37,6 +37,7 @@ def build_analysis_report(
     antidump_detect: Dict[str, Any],
     native_demux_detect: Optional[Dict[str, Any]] = None,
     native_demux_payloads: Optional[List[Dict[str, Any]]] = None,
+    threat_rules_telemetry: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Assembles all subsystem forensic findings into a unified analysis report dictionary."""
     return {
@@ -222,5 +223,10 @@ def build_analysis_report(
             "mismatch_count": (native_demux_detect or {}).get("mismatch_count", 0),
             "anomalies": (native_demux_detect or {}).get("anomalies", []),
             "payloads": native_demux_payloads or [],
+        },
+        "threat_hunting_rules": threat_rules_telemetry or {
+            "synthesized": False,
+            "yara_count": 0,
+            "sigma_count": 0,
         },
     }

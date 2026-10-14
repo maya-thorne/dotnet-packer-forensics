@@ -109,8 +109,21 @@ from .unpackers.native_demuxer_models import (
     TargetArchitecture,
     TargetOS,
 )
+from .rules import (
+    ExtractedThreatFeatures,
+    RuleFormat,
+    RuleGranularity,
+    RuleGenerationResult,
+    RuleSeverity,
+    SigmaRule,
+    ThreatFeatureExtractor,
+    ThreatRuleEngine,
+    YARARule,
+    YARASynthesizer,
+    SigmaSynthesizer,
+)
 
-__version__ = "2.3.0"
+__version__ = "2.4.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -200,6 +213,17 @@ __all__ = [
     "NativePayloadInfo",
     "PlatformRouteResult",
     "NativeDemuxerTelemetry",
+    "ThreatRuleEngine",
+    "ThreatFeatureExtractor",
+    "YARASynthesizer",
+    "SigmaSynthesizer",
+    "ExtractedThreatFeatures",
+    "RuleFormat",
+    "RuleGranularity",
+    "RuleSeverity",
+    "RuleGenerationResult",
+    "YARARule",
+    "SigmaRule",
     "__version__",
 ]
 

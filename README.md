@@ -137,6 +137,11 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `--demux-out` | Directory path to export demuxed native binaries organized by architecture | None |
 | `--route-arch` | Target CPU architecture to simulate runtime loader routing for (e.g. x86, x64, arm64) | None |
 | `--route-os` | Target OS platform for routing simulation (windows, linux, osx) | `windows` |
+| `--gen-rules` | Synthesize automated threat hunting YARA and Sigma detection rules | `False` |
+| `--gen-yara` | Synthesize and display YARA detection rules for target binary | `False` |
+| `--gen-sigma` | Synthesize and display Sigma detection rules for target binary | `False` |
+| `--rules-out` | Directory path to export synthesized YARA/Sigma rules and manifest | None |
+| `--rule-level` | Threat rule granularity level (`specific`, `behavioral`, `hunt`) | `behavioral` |
 | `--rebuild` | Reconstruct damaged PE headers, realign sections, and repair standalone binary | `False` |
 | `--rebuild-out` | Output destination path for rebuilt PE binary | None |
 | `--unmap-dump` | Force process memory dump unmapping (realign RVA mapped sections to disk raw offsets) | `False` |
@@ -147,7 +152,7 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v2.3.0` |
+| `--version` | Display engine version and exit | `v2.4.0` |
 
 
 </details>
@@ -391,6 +396,31 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>dotnet_deobfuscator/payload_verifier.py</code></td>
       <td><b>Payload Verifier &amp; Test Harness</b></td>
       <td>Performs bitwise byte-level divergence comparison, cryptographic hashing (SHA-256/SHA-1/MD5), and PE/CLR structural integrity regression auditing.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/rules/models.py</code></td>
+      <td><b>Threat Rule Models &amp; Enums</b></td>
+      <td>Encapsulates YARARule, SigmaRule, RuleGranularity, RuleSeverity, ExtractedThreatFeatures, and generation results.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/rules/feature_extractor.py</code></td>
+      <td><b>Threat Feature Extractor</b></td>
+      <td>Extracts binary hashes, PE structure, imphash, section entropy, CIL bytecodes, and zeroes scratchpad buffers.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/rules/yara_synthesizer.py</code></td>
+      <td><b>Dynamic YARA Synthesizer</b></td>
+      <td>Generates syntactically pristine YARA v4+ rules across Specific, Behavioral, and Threat Hunting tiers.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/rules/sigma_synthesizer.py</code></td>
+      <td><b>Dynamic Sigma Synthesizer</b></td>
+      <td>Emits spec-compliant Sigma v2 YAML rules with deterministic UUID v5 identifiers and MITRE ATT&CK tags.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/rules/rule_engine.py</code></td>
+      <td><b>Threat Rule Engine Facade</b></td>
+      <td>Orchestrates feature extraction, rule synthesis, and safe directory exports with path traversal defenses.</td>
     </tr>
   </tbody>
 </table>
