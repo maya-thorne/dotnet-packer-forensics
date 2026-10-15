@@ -143,16 +143,16 @@ class MixedModeAnalyzer:
         )
 
         opt_hdr_off = file_hdr_off + 20
-        magic = struct.unpack_from("<H", data, opt_hdr_off)[0] if opt_hdr_size >= 2 else 0
+        magic = struct.unpack_from("<H", data, opt_hdr_off)[0] if opt_hdr_size >= 2 and opt_hdr_off + 2 <= len(data) else 0
         is_pe32_plus = (magic == 0x020B)
 
         entry_point_rva = 0
         image_base = 0x400000
-        if opt_hdr_size >= 24:
+        if opt_hdr_size >= 24 and opt_hdr_off + 20 <= len(data):
             entry_point_rva = struct.unpack_from("<I", data, opt_hdr_off + 16)[0]
-        if is_pe32_plus and opt_hdr_size >= 32:
+        if is_pe32_plus and opt_hdr_size >= 32 and opt_hdr_off + 32 <= len(data):
             image_base = struct.unpack_from("<Q", data, opt_hdr_off + 24)[0]
-        elif not is_pe32_plus and opt_hdr_size >= 32:
+        elif not is_pe32_plus and opt_hdr_size >= 32 and opt_hdr_off + 32 <= len(data):
             image_base = struct.unpack_from("<I", data, opt_hdr_off + 28)[0]
 
         # Data Directory indices:
@@ -165,13 +165,14 @@ class MixedModeAnalyzer:
         tls_rva, tls_size = 0, 0
         clr_rva, clr_size = 0, 0
 
-        if opt_hdr_size >= (112 if is_pe32_plus else 96) + 16:
+        req_dd_off = 112 if is_pe32_plus else 96
+        if opt_hdr_size >= req_dd_off + 16 and dir_base + 8 <= len(data):
             # Export (dir 0)
             export_rva, export_size = struct.unpack_from("<II", data, dir_base)
-        if opt_hdr_size >= (112 if is_pe32_plus else 96) + 80:
+        if opt_hdr_size >= req_dd_off + 80 and dir_base + (9 * 8) + 8 <= len(data):
             # TLS (dir 9)
             tls_rva, tls_size = struct.unpack_from("<II", data, dir_base + (9 * 8))
-        if opt_hdr_size >= (112 if is_pe32_plus else 96) + 120:
+        if opt_hdr_size >= req_dd_off + 120 and dir_base + (14 * 8) + 8 <= len(data):
             # CLR Cor20 (dir 14)
             clr_rva, clr_size = struct.unpack_from("<II", data, dir_base + (14 * 8))
 

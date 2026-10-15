@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.0] - 2026-10-15
+
+### Added
+- **Deobfuscation Regression Fuzzing Harness & Synthetic Mutated Binary Generator (`dotnet_deobfuscator.fuzzing`)**:
+  - Structurally valid baseline PE32 and .NET executable generator (`SyntheticMutatedBinaryGenerator.generate_baseline_pe`) constructing conforming DOS stubs, NT File and Optional headers, Section tables, Cor20Header COM descriptors, BSJB metadata roots, stream catalogs (#Strings, #US, #~), and valid CIL method bodies (Tiny format).
+  - 11 targeted architectural mutation operators (`MutationStrategy`): `BIT_FLIP` (targeted bitwise flipping), `BYTE_NOISE` (random byte substitution and edge integers), `DOS_HEADER_MANGLE` (MZ and e_lfanew pointer corruption), `NT_HEADER_MANGLE` (PE\\0\\0 signature and machine architecture mangling), `OPTIONAL_HEADER_MANGLE` (magic, alignments, and Cor20 DataDirectory anomalies), `SECTION_TABLE_MANGLE` (section names, out-of-bounds raw pointers, and integer overflow sizes), `COR20_DESCRIPTOR_MANGLE` (Cor20 cb, metadata RVA/size, and entrypoint token alteration), `METADATA_STREAM_MANGLE` (BSJB signature, version string, and stream count bloating), `CIL_BYTECODE_FUZZ` (invalid 0xFE 0xFF opcodes, out-of-bounds branch targets, and stack underflow sequences), `OVERLAY_INJECTION` (high-entropy noise, pseudo-protector signatures, and corrupted archive headers), and `TRUNCATION` (boundary slicing across headers and metadata).
+  - Multi-strategy corpus generation engine (`SyntheticMutatedBinaryGenerator.generate_corpus`) emitting batches of mutated test samples with deterministic PRNG seeding.
+  - Sandboxed regression fuzzing execution harness (`RegressionFuzzingHarness`) evaluating mutated samples against all forensic subsystems (`ANALYZE`, `REBUILD`, `VERIFY`, `CFG`, `BAML`, `MIXED_MODE`, `ANTIDUMP`, `ANTITAMPER`, `RULES`, `ALL`).
+  - Robust crash severity classifier (`CrashSeverity`): `CLEAN_PASS`, `HANDLED_ERROR` (graceful rejection), `REGRESSION_CRASH` (unhandled fatal parser crash), `TIMEOUT_HANG` (execution time threshold breach), and `RESOURCE_EXHAUSTION` (memory/recursion boundaries).
+  - Persistent regression ledger (`RegressionLedger`) for tracking discovered crashes, exporting reproduction bundles (mutated binary `.bin` and execution telemetry `.json`), and executing deterministic regression verification replays (`replay_crash`).
+  - Memory sanitization (`zeroize_buffer`) using `ctypes.memset` and directory traversal defense (`safe_path`).
+- **CLI & Core Orchestrator Integration**:
+  - Added `--fuzz` CLI flag to trigger automated regression fuzzing campaign across forensic targets.
+  - Added `--fuzz-iterations <INT>` CLI option specifying fuzz iteration count (default: 50).
+  - Added `--fuzz-seed <INT>` CLI option specifying PRNG seed for deterministic fuzzing (default: 1337).
+  - Added `--fuzz-targets <LIST>` CLI option to filter target subsystems to fuzz.
+  - Added `--fuzz-timeout <FLOAT>` CLI option configuring per-iteration timeout limit (default: 3.0s).
+  - Added `--fuzz-out <DIR>` CLI option to export campaign JSON report, text summary, crashing seeds, and regression ledger.
+  - Added `--gen-mutants` CLI flag to generate and export synthetic mutated binaries directly.
+  - Added `--mutant-count <INT>` CLI option configuring generated synthetic mutant count (default: 10).
+  - Integrated in-memory buffer analysis `DotNetPackerCore.analyze_bytes` and campaign runners `DotNetPackerCore.run_fuzzing_campaign` and `DotNetPackerCore.generate_synthetic_corpus`.
+- **Comprehensive Fuzzing Harness Test Suite (`tests/test_fuzzing_harness.py`)**:
+  - 42 dedicated unit and integration tests covering baseline PE generation validity, all 11 individual mutation strategies, corpus generation, clean pass execution across all targets, handled error capture on corrupted data, timeout detection, end-to-end fuzzing campaign execution, crash replay, regression ledger persistence, core orchestrator facade integration, CLI commands, path traversal protection, memory zeroization, subprocess isolation, stderr traceback preservation, stdout pollution resilience, corrupted header boundaries, and extreme section size memory limits (expanding total suite to 340 passing tests).
+
 ## [2.7.0] - 2026-10-15
 
 ### Added

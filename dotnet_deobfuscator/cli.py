@@ -31,6 +31,55 @@ def main(argv: Optional[list] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
+    # Automated Regression Fuzzing Campaign Mode
+    if args.fuzz:
+        try:
+            targets = [t.strip() for t in args.fuzz_targets.split(",")] if args.fuzz_targets else None
+            fuzz_res = DotNetPackerCore.run_fuzzing_campaign(
+                target_path=args.target,
+                iterations=args.fuzz_iterations,
+                seed=args.fuzz_seed,
+                targets=targets,
+                timeout_sec=args.fuzz_timeout,
+                output_dir=args.fuzz_out,
+                is_64bit=args.fuzz_64,
+                isolate_process=args.fuzz_isolate,
+            )
+            if args.format == "json":
+                sys.stdout.write(json.dumps(fuzz_res.to_dict(), indent=2) + "\n")
+            else:
+                from .fuzzing import RegressionFuzzingHarness
+                sys.stdout.write(RegressionFuzzingHarness.format_campaign_summary(fuzz_res) + "\n")
+            return 1 if fuzz_res.telemetry.has_regressions else 0
+        except Exception as e:
+            sys.stderr.write(f"[-] Fuzzing campaign failed: {e}\n")
+            return 1
+
+    # Synthetic Mutated Binary Generator Mode
+    if args.gen_mutants:
+        try:
+            mutants = DotNetPackerCore.generate_synthetic_corpus(
+                base_path=args.target,
+                count=args.mutant_count,
+                output_dir=args.output or args.fuzz_out,
+                is_64bit=args.fuzz_64,
+            )
+            if args.format == "json":
+                sys.stdout.write(json.dumps(mutants, indent=2) + "\n")
+            else:
+                sys.stdout.write(f"[+] Generated {len(mutants)} synthetic mutated binaries.\n")
+                for m in mutants:
+                    sys.stdout.write(f"    * [{m['index']:02d}] {m['file_name']} ({m['size_bytes']:,} bytes, {m['mutations_count']} mutations)\n")
+            return 0
+        except Exception as e:
+            sys.stderr.write(f"[-] Synthetic mutant generation failed: {e}\n")
+            return 1
+
+    if not args.target:
+        parser.print_usage(sys.stderr)
+        sys.stderr.write("[-] Error: the following arguments are required: target\n")
+        return 2
+
     try:
         report = DotNetPackerCore.analyze_file(args.target, master_key=args.key)
     except Exception as e:

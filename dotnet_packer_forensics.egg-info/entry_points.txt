@@ -1,0 +1,2 @@
+[console_scripts]
+dotnet-packer-re = dotnet_deobfuscator.cli:main
