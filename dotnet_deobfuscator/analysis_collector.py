@@ -40,6 +40,7 @@ def build_analysis_report(
     threat_rules_telemetry: Optional[Dict[str, Any]] = None,
     mixed_mode_telemetry: Optional[Dict[str, Any]] = None,
     cfg_telemetry: Optional[Dict[str, Any]] = None,
+    baml_telemetry: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Assembles all subsystem forensic findings into a unified analysis report dictionary."""
     return {
@@ -258,5 +259,16 @@ def build_analysis_report(
             "methods_with_dead_code": 0,
             "average_method_entropy": 0.0,
             "suspicious_methods": [],
+        },
+        "baml_forensics": baml_telemetry or {
+            "total_baml_streams": 0,
+            "successful_decompiles": 0,
+            "partial_decompiles": 0,
+            "failed_decompiles": 0,
+            "total_elements": 0,
+            "total_attributes": 0,
+            "total_anomalies": 0,
+            "execution_time_ms": 0.0,
+            "anomaly_types": {},
         },
     }

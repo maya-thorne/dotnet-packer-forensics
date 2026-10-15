@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.0] - 2026-10-15
+
+### Added
+- **WPF BAML & Embedded UI Resource Decompiler & XML Restorer (`dotnet_deobfuscator.baml`)**:
+  - Full-stack MS-BAML binary record parser and XAML reconstructor (`BamlBinaryReader`) supporting variable-length 7-bit encoded integers, 16-bit/32-bit little-endian fields, and tokenized record streams.
+  - Comprehensive record type support across `DocumentStart`, `DocumentEnd`, `ElementStart`, `ElementEnd`, `Property`, `PropertyCustom`, `Text`, `Comment`, `XmlnsProperty`, `PIMapping`, `DefAttribute`, `AssemblyInfo`, `TypeInfo`, `AttributeInfo`, `StringInfo`, and complex property start/end tokens.
+  - Built-in WPF token dictionary (`tokens.py`) mapping negative type IDs and attribute IDs to canonical WPF control names (`Window`, `Grid`, `Button`, `TextBox`, `TextBlock`, `StackPanel`, `Border`, `Canvas`, etc.) and dependency properties (`Width`, `Height`, `Margin`, `Visibility`, `Content`, `Title`, `Click`, `Loaded`, etc.).
+  - Robust XAML/XML generator (`XamlEmitter`) emitting human-readable, well-indented XAML documents with XML entity escaping (`&`, `<`, `>`, `"`, `'`), root namespace declarations (`xmlns`, `xmlns:x`), self-closing tags, and syntactic well-formedness validation via `xml.etree.ElementTree`.
+  - Managed resource container parser (`BamlResourceExtractor.extract_from_resources`) reading standard .NET `.resources` manifests (`0xBEEFCACE` magic) to extract embedded `.baml` streams.
+  - Heuristic raw BAML stream carver (`BamlResourceExtractor.carve_baml_streams`) recovering standalone BAML byte sequences from PE sections and raw binary buffers.
+  - Automated static forensic anomaly detection (`detect_anomalies`) flagging suspicious event handlers (`_Loaded`, `_Click` bound to shellcode/stager routines), concealed UI elements (`Visibility="Collapsed"` or `Opacity="0"` with active controls), external C2 URIs, obfuscated Unicode identifiers (`x:Class`), and high-entropy Base64 payloads.
+  - High-level orchestration facade (`BamlDecompiler`) and safe directory export engine (`export_to_directory`) outputting `.xaml` documents and structured `baml_manifest.json` manifests with strict directory traversal prevention (`_safe_path`).
+  - Cryptographic memory sanitization (`zeroize_buffer`) using `ctypes.memset` to scrub intermediate byte streams and decrypted resource buffers.
+- **CLI & Core Orchestrator Integration**:
+  - Added `--baml` CLI flag to extract and decompile embedded WPF BAML UI resources to clean XAML markup.
+  - Added `--baml-out <DIR>` CLI flag to export decompiled XAML documents and structured JSON manifests to disk.
+  - Added `--baml-raw` CLI flag to optionally export raw `.baml` binary streams alongside `.xaml` documents.
+  - Integrated BAML forensics telemetry into `DotNetPackerCore.analyze_file`, `DotNetPackerCore.analyze_baml`, `DotNetPackerCore.export_baml`, `analysis_collector.py`, and `report_formatter.py`.
+- **Architectural Refactoring & Modularity**:
+  - Extracted CLI argument parser into dedicated `dotnet_deobfuscator/cli_args.py` (260 lines), reducing `cli.py` to 483 lines.
+  - Extracted multi-protector payload unpacking and directory extraction dispatch logic into `dotnet_deobfuscator/unpacker_dispatcher.py` (112 lines), keeping `core.py` under 665 lines.
+- **Comprehensive BAML Decompiler Test Suite (`tests/test_baml_decompiler.py`)**:
+  - 11 dedicated unit and integration tests covering primitive reader bounds, synthetic BAML decoding, XML well-formedness validation, entity escaping, suspicious URI and event handler anomaly detection, .resources container parsing, stream carving, safe directory export, path traversal defense, memory zeroization, core facade integration, and CLI execution (expanding total test suite to 298 passing tests).
+
 ## [2.6.0] - 2026-10-15
 
 ### Added
