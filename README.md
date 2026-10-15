@@ -149,6 +149,9 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `--cfg-token` | Target specific method token (e.g. 0x06000001) for CFG visualization | None |
 | `--cfg-format` | Visualization export format (`mermaid`, `dot`, `svg`, `ascii`, `json`, `all`) | `all` |
 | `--cfg-out` | Directory path to export CFG diagrams, vector SVG charts, and JSON manifests | None |
+| `--baml` | Extract and decompile embedded WPF BAML UI resources to clean XAML | `False` |
+| `--baml-out` | Directory path to export decompiled XAML documents and structured JSON manifest | None |
+| `--baml-raw` | Also export raw binary .baml streams alongside decompiled .xaml files | `False` |
 | `--rebuild` | Reconstruct damaged PE headers, realign sections, and repair standalone binary | `False` |
 | `--rebuild-out` | Output destination path for rebuilt PE binary | None |
 | `--unmap-dump` | Force process memory dump unmapping (realign RVA mapped sections to disk raw offsets) | `False` |
@@ -159,7 +162,7 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v2.6.0` |
+| `--version` | Display engine version and exit | `v2.7.0` |
 
 
 </details>

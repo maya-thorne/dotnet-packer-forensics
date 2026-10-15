@@ -157,8 +157,24 @@ from .cfg import (
     DiagramFormat,
     MethodCFG,
 )
+from .baml import (
+    BamlAnomalyFlag,
+    BamlBinaryReader,
+    BamlDecompiler,
+    BamlDecompileStatus,
+    BamlElement,
+    BamlError,
+    BamlExtractionResult,
+    BamlRecordType,
+    BamlResourceExtractor,
+    BamlTelemetry,
+    DecompiledXaml,
+    ResourceSourceType,
+    UIElementType,
+    XamlEmitter,
+)
 
-__version__ = "2.6.0"
+__version__ = "2.7.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -291,6 +307,20 @@ __all__ = [
     "MethodCFG",
     "CFGTelemetry",
     "CFGAnalysisResult",
+    "BamlDecompiler",
+    "BamlBinaryReader",
+    "BamlResourceExtractor",
+    "XamlEmitter",
+    "BamlRecordType",
+    "BamlDecompileStatus",
+    "UIElementType",
+    "ResourceSourceType",
+    "BamlAnomalyFlag",
+    "BamlElement",
+    "DecompiledXaml",
+    "BamlTelemetry",
+    "BamlExtractionResult",
+    "BamlError",
     "__version__",
 ]
 

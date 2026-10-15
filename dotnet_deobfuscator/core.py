@@ -20,6 +20,8 @@ from .unpackers.native_demuxer import NativeDemuxerUnpacker
 from .rules import RuleFormat, RuleGranularity, RuleGenerationResult, ThreatRuleEngine
 from .mixed_mode import MixedModeAnalyzer, MixedModeAnalysisResult
 from .cfg import CFGAnalyzer, CFGAnalysisResult, MethodCFG
+from .baml import BamlDecompiler, BamlExtractionResult
+from .unpacker_dispatcher import unpack_payload_to_file, unpack_all_to_dir
 from .unpackers.armdot import ArmDotOpcodeTable, ArmDotUnpacker, ArmDotVMDisassembler
 from .unpackers.babel import BabelUnpacker
 from .unpackers.confuserex import ConfuserExUnpacker
@@ -132,6 +134,10 @@ class DotNetPackerCore:
         cfg_res = CFGAnalyzer.analyze(data, file_name=os.path.basename(file_path))
         cfg_telemetry = cfg_res.telemetry.to_dict()
 
+        # 20. WPF BAML & Embedded UI Resource Forensics
+        baml_res = BamlDecompiler.decompile_assembly_data(data, file_name=os.path.basename(file_path))
+        baml_telemetry = baml_res.telemetry.to_dict()
+
         return build_analysis_report(
             file_path=file_path, file_size=file_size, elapsed_ms=elapsed_ms,
             hashes=hashes, assembly_info=assembly_info, detected_protectors=detected_protectors,
@@ -147,7 +153,7 @@ class DotNetPackerCore:
             antitamper_detect=antitamper_detect, antidump_detect=antidump_detect,
             native_demux_detect=native_demux_detect, native_demux_payloads=native_demux_payloads,
             threat_rules_telemetry=threat_rules_telemetry, mixed_mode_telemetry=mixed_mode_telemetry,
-            cfg_telemetry=cfg_telemetry,
+            cfg_telemetry=cfg_telemetry, baml_telemetry=baml_telemetry,
         )
 
 
@@ -179,100 +185,17 @@ class DotNetPackerCore:
     def unpack_to_file(
         cls, input_path: str, output_path: str, master_key: str = "randomkey"
     ) -> bool:
-        """Extracts and writes decrypted payload to disk."""
+        """Extracts and writes decrypted payload to disk across all supported protector types."""
         with open(input_path, "rb") as f:
             data = f.read()
-
-        xor_result = PEOverlayParser.decrypt_xor_packer(data, master_key=master_key)
-        if xor_result:
-            with open(output_path, "wb") as f:
-                f.write(xor_result["decrypted_payload_bytes"])
-            return True
-
-        # Check if single Costura payload exists
-        costura_payloads = CosturaUnpacker.unpack(data)
-        if len(costura_payloads) == 1:
-            with open(output_path, "wb") as f:
-                f.write(costura_payloads[0]["payload_bytes"])
-            return True
-
-        # Check if single ConfuserEx payload exists
-        confuser_payloads = ConfuserExUnpacker.unpack(data)
-        if len(confuser_payloads) == 1:
-            with open(output_path, "wb") as f:
-                f.write(confuser_payloads[0]["payload_bytes"])
-            return True
-
-        # Check if single .NET Reactor payload exists
-        reactor_payloads = DotNetReactorUnpacker.unpack(data)
-        if len(reactor_payloads) == 1:
-            with open(output_path, "wb") as f:
-                f.write(reactor_payloads[0]["payload_bytes"])
-            return True
-
-        # Check if Eazfuscator VM containers exist
-        eaz_containers = EazfuscatorUnpacker.extract_vm_containers(data)
-        if eaz_containers:
-            rebuilt_pe, rep = EazfuscatorUnpacker.devirtualize_assembly(data)
-            if rep.get("success") or rep.get("methods_devirtualized_count", 0) > 0:
-                with open(output_path, "wb") as f:
-                    f.write(rebuilt_pe)
-                return True
-
-        # Check if single Babel merged assembly exists
-        babel_merged = BabelUnpacker.extract_merged_assemblies(data)
-        if len(babel_merged) == 1:
-            with open(output_path, "wb") as f:
-                f.write(babel_merged[0]["payload_bytes"])
-            return True
-
-        # Check if ArmDot VM containers exist
-        armdot_containers = ArmDotUnpacker.extract_vm_containers(data)
-        if armdot_containers:
-            rebuilt_pe, rep = ArmDotUnpacker.devirtualize_assembly(data)
-            if rep.get("success") or rep.get("methods_devirtualized_count", 0) > 0:
-                with open(output_path, "wb") as f:
-                    f.write(rebuilt_pe)
-                return True
-
-        # Check if DeepSea flattened methods exist
-        deepsea_detect = DeepSeaUnpacker.detect(data)
-        if deepsea_detect["is_deepsea"]:
-            rebuilt_pe, rep = DeepSeaUnpacker.deflatten_assembly(data)
-            with open(output_path, "wb") as f:
-                f.write(rebuilt_pe)
-            return True
-
-        # Check if AntiDump memory dump needs healing
-        antidump_detect = AntiDumpUnpacker.detect(data)
-        if antidump_detect["is_anti_dump"]:
-            healed_pe, rep = AntiDumpUnpacker.heal_dump(data)
-            if rep.get("is_healed"):
-                with open(output_path, "wb") as f:
-                    f.write(healed_pe)
-                return True
-
-        return False
+        return unpack_payload_to_file(data, output_path=output_path, master_key=master_key)
 
     @classmethod
     def unpack_to_dir(cls, input_path: str, output_dir: str) -> List[Dict[str, any]]:
         """Extracts all embedded Costura, ConfuserEx, .NET Reactor, Eazfuscator, Babel, ArmDot, DeepSea, AntiTamper, and AntiDump assemblies into target directory."""
         with open(input_path, "rb") as f:
             data = f.read()
-        written = []
-        written.extend(CosturaUnpacker.unpack_to_directory(data, output_dir))
-        written.extend(ConfuserExUnpacker.unpack_to_directory(data, output_dir))
-        written.extend(DotNetReactorUnpacker.unpack_to_directory(data, output_dir))
-        written.extend(EazfuscatorUnpacker.unpack_to_directory(data, output_dir))
-        written.extend(BabelUnpacker.unpack_to_directory(data, output_dir))
-        written.extend(ArmDotUnpacker.unpack_to_directory(data, output_dir))
-        if DeepSeaUnpacker.detect(data)["is_deepsea"]:
-            DeepSeaUnpacker.unpack_to_directory(data, output_dir)
-        if AntiTamperUnpacker.detect(data)["is_tampered"]:
-            AntiTamperUnpacker.unpack_to_directory(data, output_dir)
-        if AntiDumpUnpacker.detect(data)["is_anti_dump"]:
-            AntiDumpUnpacker.unpack_to_directory(data, output_dir)
-        return written
+        return unpack_all_to_dir(data, output_dir=output_dir)
 
 
     @classmethod
@@ -719,5 +642,24 @@ class DotNetPackerCore:
         return CFGAnalyzer.export_to_directory(
             res, output_dir=output_dir, formats=formats, max_exported_methods=max_exported_methods
         )
+
+    @classmethod
+    def analyze_baml(cls, input_path: str) -> BamlExtractionResult:
+        """Performs static BAML UI forensics and XAML decompiler analysis on binary."""
+        return BamlDecompiler.decompile_file(input_path)
+
+    @classmethod
+    def export_baml(
+        cls,
+        input_path: str,
+        output_dir: str,
+        export_raw_baml: bool = False,
+    ) -> Dict[str, Any]:
+        """Extracts and decompiles BAML streams and exports XAML documents to disk."""
+        res = cls.analyze_baml(input_path)
+        return BamlDecompiler.export_to_directory(
+            res, output_dir=output_dir, export_raw_baml=export_raw_baml
+        )
+
 
 

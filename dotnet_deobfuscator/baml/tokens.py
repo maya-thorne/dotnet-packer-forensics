@@ -1,0 +1,248 @@
+"""
+WPF BAML Known Types, Known Attributes, and XML Namespaces Dictionary.
+Engineered & Audited by Maya Thorne.
+"""
+
+from typing import Dict, Optional
+
+
+# Standard WPF and XAML XML Namespaces
+PRESENTATION_XMLNS = "http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+XAML_XMLNS = "http://schemas.microsoft.com/winfx/2006/xaml"
+DESIGN_XMLNS = "http://schemas.microsoft.com/expression/blend/2008"
+MC_XMLNS = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+
+
+# Built-in WPF Control & Structure Types (Negative Type IDs in MS-BAML)
+KNOWN_BAML_TYPES: Dict[int, str] = {
+    -1: "Button",
+    -2: "ButtonBase",
+    -3: "Canvas",
+    -4: "CheckBox",
+    -5: "ComboBox",
+    -6: "ComboBoxItem",
+    -7: "ContentControl",
+    -8: "Control",
+    -9: "DataTemplate",
+    -10: "DockPanel",
+    -11: "DocumentViewer",
+    -12: "Ellipse",
+    -13: "Expander",
+    -14: "FlowDocument",
+    -15: "Frame",
+    -16: "Grid",
+    -17: "GridSplitter",
+    -18: "GroupBox",
+    -19: "HeaderedContentControl",
+    -20: "HeaderedItemsControl",
+    -21: "Hyperlink",
+    -22: "Image",
+    -23: "ItemsControl",
+    -24: "Label",
+    -25: "Line",
+    -26: "ListBox",
+    -27: "ListBoxItem",
+    -28: "ListView",
+    -29: "ListViewItem",
+    -30: "Menu",
+    -31: "MenuItem",
+    -32: "NavigationWindow",
+    -33: "Page",
+    -34: "Panel",
+    -35: "Paragraph",
+    -36: "PasswordBox",
+    -37: "Path",
+    -38: "Polygon",
+    -39: "Polyline",
+    -40: "ProgressBar",
+    -41: "RadioButton",
+    -42: "Rectangle",
+    -43: "RichTextBox",
+    -44: "RowDefinition",
+    -45: "ColumnDefinition",
+    -46: "ScrollViewer",
+    -47: "Separator",
+    -48: "Slider",
+    -49: "Span",
+    -50: "StackPanel",
+    -51: "StatusBar",
+    -52: "StatusBarItem",
+    -53: "Style",
+    -54: "TabControl",
+    -55: "TabItem",
+    -56: "TextBlock",
+    -57: "TextBox",
+    -58: "TextBoxBase",
+    -59: "ToolBar",
+    -60: "ToolBarTray",
+    -61: "ToolTip",
+    -62: "TreeView",
+    -63: "TreeViewItem",
+    -64: "UserControl",
+    -65: "Viewbox",
+    -66: "Viewport3D",
+    -67: "Window",
+    -68: "WrapPanel",
+    -69: "ResourceDictionary",
+    -70: "Application",
+    -71: "Setter",
+    -72: "Trigger",
+    -73: "MultiTrigger",
+    -74: "DataTrigger",
+    -75: "EventTrigger",
+    -76: "LinearGradientBrush",
+    -77: "RadialGradientBrush",
+    -78: "SolidColorBrush",
+    -79: "ImageBrush",
+    -80: "DrawingBrush",
+    -81: "VisualBrush",
+    -82: "Border",
+    -83: "Binding",
+    -84: "TemplateBinding",
+    -85: "StaticResource",
+    -86: "DynamicResource",
+    -87: "RelativeSource",
+    -88: "Storyboard",
+    -89: "DoubleAnimation",
+    -90: "ColorAnimation",
+    -91: "ThicknessAnimation",
+    -92: "ObjectAnimationUsingKeyFrames",
+    -93: "DiscreteObjectKeyFrame",
+    -94: "SplineDoubleKeyFrame",
+    -95: "DropShadowEffect",
+    -96: "BlurEffect",
+    -97: "WebBrowser",
+    -98: "MediaElement",
+    -99: "InkCanvas",
+    -100: "ContentPresenter",
+}
+
+
+# Built-in WPF Dependency Properties & Attributes (Negative Attribute IDs in MS-BAML)
+KNOWN_BAML_ATTRIBUTES: Dict[int, str] = {
+    -1: "Name",
+    -2: "Width",
+    -3: "Height",
+    -4: "Margin",
+    -5: "Padding",
+    -6: "HorizontalAlignment",
+    -7: "VerticalAlignment",
+    -8: "Visibility",
+    -9: "Opacity",
+    -10: "Background",
+    -11: "Foreground",
+    -12: "BorderBrush",
+    -13: "BorderThickness",
+    -14: "FontFamily",
+    -15: "FontSize",
+    -16: "FontWeight",
+    -17: "FontStyle",
+    -18: "Content",
+    -19: "Text",
+    -20: "Title",
+    -21: "Icon",
+    -22: "Source",
+    -23: "Click",
+    -24: "Loaded",
+    -25: "Unloaded",
+    -26: "MouseEnter",
+    -27: "MouseLeave",
+    -28: "MouseDown",
+    -29: "MouseUp",
+    -30: "KeyDown",
+    -31: "KeyUp",
+    -32: "Command",
+    -33: "CommandParameter",
+    -34: "TargetNullValue",
+    -35: "FallbackValue",
+    -36: "Converter",
+    -37: "ConverterParameter",
+    -38: "Mode",
+    -39: "Path",
+    -40: "ElementName",
+    -41: "RelativeSource",
+    -42: "TargetType",
+    -43: "Property",
+    -44: "Value",
+    -45: "Key",
+    -46: "Class",
+    -47: "Uid",
+    -48: "Shared",
+    -49: "Tag",
+    -50: "ToolTip",
+    -51: "Cursor",
+    -52: "Focusable",
+    -53: "IsEnabled",
+    -54: "IsVisible",
+    -55: "ActualWidth",
+    -56: "ActualHeight",
+    -57: "MinWidth",
+    -58: "MinHeight",
+    -59: "MaxWidth",
+    -60: "MaxHeight",
+    -61: "Row",
+    -62: "Column",
+    -63: "RowSpan",
+    -64: "ColumnSpan",
+    -65: "NavigateUri",
+    -66: "TargetName",
+    -67: "Duration",
+    -68: "From",
+    -69: "To",
+    -70: "By",
+    -71: "Color",
+    -72: "Offset",
+    -73: "StartPoint",
+    -74: "EndPoint",
+    -75: "Fill",
+    -76: "Stroke",
+    -77: "StrokeThickness",
+    -78: "CornerRadius",
+    -79: "Orientation",
+    -80: "ItemsSource",
+    -81: "SelectedItem",
+    -82: "SelectedIndex",
+    -83: "SelectedValue",
+    -84: "ItemTemplate",
+    -85: "Header",
+    -86: "IsChecked",
+    -87: "IsReadOnly",
+    -88: "AcceptsReturn",
+    -89: "TextWrapping",
+    -90: "WindowStartupLocation",
+    -91: "WindowState",
+    -92: "ResizeMode",
+    -93: "ShowInTaskbar",
+    -94: "Topmost",
+    -95: "StartupUri",
+    -96: "ShutdownMode",
+    -97: "ContentTemplate",
+    -98: "DataContext",
+    -99: "Style",
+    -100: "ClipToBounds",
+}
+
+
+def resolve_type_name(type_id: int, custom_types: Optional[Dict[int, str]] = None) -> str:
+    """Resolves a Type ID to a human-readable WPF/CLR element name."""
+    if custom_types and type_id in custom_types:
+        return custom_types[type_id]
+    if type_id in KNOWN_BAML_TYPES:
+        return KNOWN_BAML_TYPES[type_id]
+    # Check positive or negative absolute fallback
+    neg_id = -abs(type_id) if type_id != 0 else -1
+    if neg_id in KNOWN_BAML_TYPES:
+        return KNOWN_BAML_TYPES[neg_id]
+    return f"Type_{type_id}"
+
+
+def resolve_attribute_name(attr_id: int, custom_attrs: Optional[Dict[int, str]] = None) -> str:
+    """Resolves an Attribute ID to a property name."""
+    if custom_attrs and attr_id in custom_attrs:
+        return custom_attrs[attr_id]
+    if attr_id in KNOWN_BAML_ATTRIBUTES:
+        return KNOWN_BAML_ATTRIBUTES[attr_id]
+    neg_id = -abs(attr_id) if attr_id != 0 else -1
+    if neg_id in KNOWN_BAML_ATTRIBUTES:
+        return KNOWN_BAML_ATTRIBUTES[neg_id]
+    return f"Property_{attr_id}"

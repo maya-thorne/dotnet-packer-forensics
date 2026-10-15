@@ -325,6 +325,23 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
             for sm in cfg.get("suspicious_methods", [])[:3]:
                 lines.append(f"      * {sm}")
 
+    baml = report.get("baml_forensics", {})
+    if baml.get("total_baml_streams", 0) > 0:
+        lines.append("")
+        lines.append("--- [WPF BAML & Embedded UI Resource Forensics] ---")
+        lines.append(
+            f"  [+] BAML Streams       : {baml.get('total_baml_streams', 0)} streams ({baml.get('successful_decompiles', 0)} decompiled, {baml.get('failed_decompiles', 0)} failed)"
+        )
+        lines.append(
+            f"      UI Structure       : {baml.get('total_elements', 0)} elements, {baml.get('total_attributes', 0)} properties"
+        )
+        if baml.get("total_anomalies", 0) > 0:
+            lines.append(
+                f"  [!] UI Security Alerts : {baml.get('total_anomalies', 0)} anomaly indicator(s) identified in XAML markup"
+            )
+            for anom_k, anom_cnt in list(baml.get("anomaly_types", {}).items())[:4]:
+                lines.append(f"      * {anom_k}: {anom_cnt} occurrence(s)")
+
     if verbose and report.get("sections"):
         lines.append("")
         lines.append("--- [Section Topology & Entropy] ---")
