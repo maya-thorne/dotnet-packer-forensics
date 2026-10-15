@@ -256,6 +256,8 @@ class PERebuilder:
             pe_offset = 0x80
             buf = bytearray(pe_offset + 248) + buf
             report.actions_applied.append("Synthesized clean DOS and NT header base")
+        elif len(buf) < pe_offset + 248:
+            buf.extend(b"\x00" * (pe_offset + 248 - len(buf)))
 
         if options.fix_dos_header:
             # Fix DOS magic
@@ -394,12 +396,14 @@ class PERebuilder:
             actual_content_len = len(sec_bytes)
             aligned_raw_size = cls.align_up(actual_content_len, file_align)
             if aligned_raw_size == 0 and sec.virtual_size > 0:
-                aligned_raw_size = cls.align_up(sec.virtual_size, file_align)
+                aligned_raw_size = min(cls.align_up(sec.virtual_size, file_align), 0x1000)
+            aligned_raw_size = min(aligned_raw_size, 20 * 1024 * 1024)
 
-            sec.raw_ptr = current_file_offset
-            sec.raw_size = aligned_raw_size
+            sec.raw_ptr = current_file_offset & 0xFFFFFFFF
+            sec.raw_size = aligned_raw_size & 0xFFFFFFFF
             if sec.virtual_size == 0:
                 sec.virtual_size = actual_content_len
+            sec.virtual_size = sec.virtual_size & 0xFFFFFFFF
 
             # Append padded data to rebuilt buffer
             rebuilt.extend(sec_bytes)
@@ -425,7 +429,7 @@ class PERebuilder:
         # ---------------------------------------------------------
         if sections:
             highest_sec = max(sections, key=lambda s: s.virtual_address + s.virtual_size)
-            new_size_of_image = cls.align_up(highest_sec.virtual_address + highest_sec.virtual_size, sec_align)
+            new_size_of_image = cls.align_up(highest_sec.virtual_address + highest_sec.virtual_size, sec_align) & 0xFFFFFFFF
             struct.pack_into("<I", rebuilt, pe_offset + 80, new_size_of_image)
             report.new_size_of_image = new_size_of_image
             report.actions_applied.append(f"Updated SizeOfImage -> 0x{new_size_of_image:X}")

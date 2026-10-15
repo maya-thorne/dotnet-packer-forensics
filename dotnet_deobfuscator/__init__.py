@@ -173,8 +173,20 @@ from .baml import (
     UIElementType,
     XamlEmitter,
 )
+from .fuzzing import (
+    CrashSeverity,
+    FuzzCampaignResult,
+    FuzzCampaignTelemetry,
+    FuzzExecutionResult,
+    FuzzTarget,
+    MutationRecord,
+    MutationStrategy,
+    RegressionFuzzingHarness,
+    RegressionLedger,
+    SyntheticMutatedBinaryGenerator,
+)
 
-__version__ = "2.7.0"
+__version__ = "2.8.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -321,6 +333,16 @@ __all__ = [
     "BamlTelemetry",
     "BamlExtractionResult",
     "BamlError",
+    "CrashSeverity",
+    "FuzzCampaignResult",
+    "FuzzCampaignTelemetry",
+    "FuzzExecutionResult",
+    "FuzzTarget",
+    "MutationRecord",
+    "MutationStrategy",
+    "RegressionFuzzingHarness",
+    "RegressionLedger",
+    "SyntheticMutatedBinaryGenerator",
     "__version__",
 ]
 

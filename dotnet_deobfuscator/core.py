@@ -3,11 +3,19 @@ Core Orchestrator for .NET Packer & PE Forensics.
 Engineered & Audited by Maya Thorne.
 """
 
+import hashlib
 import os
 import struct
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from .fuzzing import (
+    FuzzCampaignResult,
+    FuzzTarget,
+    MutationStrategy,
+    RegressionFuzzingHarness,
+    SyntheticMutatedBinaryGenerator,
+)
 from .analysis_collector import build_analysis_report
 from .dotnet_analyzer import DotNetAnalyzer
 from .payload_verifier import PayloadVerificationResult, PayloadVerifier
@@ -36,86 +44,74 @@ from .unpackers.reactor import DotNetReactorUnpacker
 class DotNetPackerCore:
     """High-level forensic orchestrator for .NET and PE packer analysis."""
 
-    @staticmethod
-    def analyze_file(file_path: str, master_key: str = "randomkey") -> Dict[str, any]:
+    @classmethod
+    def analyze_file(cls, file_path: str, master_key: str = "randomkey") -> Dict[str, Any]:
         """Runs full static analysis on binary file and attempts automatic unpacking."""
-        start_time = time.perf_counter()
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Target binary not found: {file_path}")
 
         with open(file_path, "rb") as f:
             data = f.read()
 
+        return cls.analyze_bytes(data, master_key=master_key, file_name=os.path.basename(file_path))
+
+    @classmethod
+    def analyze_bytes(
+        cls,
+        data: bytes,
+        master_key: str = "randomkey",
+        file_name: str = "target.exe",
+    ) -> Dict[str, Any]:
+        """Runs full static analysis on in-memory binary buffer and attempts automatic unpacking."""
+        start_time = time.perf_counter()
         elapsed_ms = round((time.perf_counter() - start_time) * 1000, 3)
         file_size = len(data)
 
-        # 1. Structural Assembly Analysis
+        # 1. Structural Assembly Analysis & Protector Signatures
         assembly_info = DotNetAnalyzer.inspect_assembly(data)
-
-        # 2. Protector Signature Matching
         detected_protectors = ProtectorSignatures.identify(data)
 
-        # 3. PE Overlay Detection & xorPacker Decryption
+        # 2. PE Overlay Detection & xorPacker Decryption
         pe_size = PEOverlayParser.calculate_pe_size(data)
         overlay_bytes = PEOverlayParser.extract_overlay(data)
         xor_result = PEOverlayParser.decrypt_xor_packer(data, master_key=master_key)
 
-        # 4. Costura Embedded Assembly Inspection
+        # 3. Costura & ConfuserEx Forensics
         costura_detect = CosturaUnpacker.detect(data)
         costura_payloads = CosturaUnpacker.unpack(data)
-
-        # 5. ConfuserEx Modular Protector Inspection & String / Resource Forensics
         confuser_detect = ConfuserExUnpacker.detect(data)
         confuser_payloads = ConfuserExUnpacker.unpack(data)
-
-        # Extract decrypted strings across CLI resources and raw streams
         confuser_strings_list: List[str] = []
         if confuser_detect["is_confuserex"]:
             confuser_strings_list = DotNetPackerCore._extract_confuser_strings(data)
 
-        # 6. .NET Reactor & NecroBit / Native Stub Envelope Forensics
+        # 4. .NET Reactor, Eazfuscator, Babel & ArmDot Virtual Machine Forensics
         reactor_detect = DotNetReactorUnpacker.detect(data)
         reactor_payloads = DotNetReactorUnpacker.unpack(data)
         reactor_methods = DotNetReactorUnpacker.extract_necrobit_methods(data)
-
-        # 7. Eazfuscator.NET VM Forensics & Virtualized Method Containers
         eaz_detect = EazfuscatorUnpacker.detect(data)
         eaz_containers = EazfuscatorUnpacker.extract_vm_containers(data)
-
-        # 8. Babel Obfuscator Cross-Assembly Forensics & Merged Assemblies
         babel_detect = BabelUnpacker.detect(data)
         babel_merged = BabelUnpacker.extract_merged_assemblies(data)
-
-        # 9. ArmDot Method-Level Virtual Machine Forensics & Containers
         armdot_detect = ArmDotUnpacker.detect(data)
         armdot_containers = ArmDotUnpacker.extract_vm_containers(data)
 
-        # 10. IntelliLock License Management Envelope & Hardware Locking Forensics
+        # 5. IntelliLock, DeepSea, Anti-Tamper, Anti-Dump & Native Demuxer
         intellilock_detect = IntelliLockUnpacker.detect(data)
-
-        # 11. DeepSea Obfuscator Control Flow Flattening Forensics
         deepsea_detect = DeepSeaUnpacker.detect(data)
-
-        # 12. CLI Metadata Anti-Tamper & JIT Dumper Forensics
         antitamper_detect = AntiTamperUnpacker.detect(data)
-
-        # 13. Anti-Dump Memory PE Header & Scylla Dump Forensics
         antidump_detect = AntiDumpUnpacker.detect(data)
-
-        # 14. Native Multi-Architecture Resource Demuxer & Platform Router Forensics
         native_demux_detect = NativeDemuxerUnpacker.detect(data)
         _, native_demux_payload_objs = NativeDemuxerUnpacker.demux(data)
         native_demux_payloads = [p.to_dict() for p in native_demux_payload_objs]
 
-        # 15. PE Structural Health & Section Rebuilder Diagnostics
+        # 6. PE Structural Health & Integrity Baselines
         pe_diag = PERebuilder.detect_anomalies(data)
-
-        # 16. Cryptographic Hashes & Integrity Baselines
         hashes = PayloadVerifier.compute_hashes(data)
 
         # 17. Automated Threat Hunting Rule Synthesis (Behavioral Baseline)
         threat_rules_res = ThreatRuleEngine.synthesize_from_bytes(
-            data, file_name=os.path.basename(file_path), granularity=RuleGranularity.BEHAVIORAL
+            data, file_name=file_name, granularity=RuleGranularity.BEHAVIORAL
         )
         threat_rules_telemetry = {
             "synthesized": True,
@@ -127,19 +123,19 @@ class DotNetPackerCore:
         }
 
         # 18. Native Mixed-Mode PE Forensics & CIL-Native Transition Tracer
-        mixed_mode_res = MixedModeAnalyzer.analyze(data, file_name=os.path.basename(file_path))
+        mixed_mode_res = MixedModeAnalyzer.analyze(data, file_name=file_name)
         mixed_mode_telemetry = mixed_mode_res.telemetry.to_dict()
 
         # 19. CIL Control Flow Graph (CFG) & High-Entropy Block Diagnostics
-        cfg_res = CFGAnalyzer.analyze(data, file_name=os.path.basename(file_path))
+        cfg_res = CFGAnalyzer.analyze(data, file_name=file_name)
         cfg_telemetry = cfg_res.telemetry.to_dict()
 
         # 20. WPF BAML & Embedded UI Resource Forensics
-        baml_res = BamlDecompiler.decompile_assembly_data(data, file_name=os.path.basename(file_path))
+        baml_res = BamlDecompiler.decompile_assembly_data(data, file_name=file_name)
         baml_telemetry = baml_res.telemetry.to_dict()
 
         return build_analysis_report(
-            file_path=file_path, file_size=file_size, elapsed_ms=elapsed_ms,
+            file_path=file_name, file_size=file_size, elapsed_ms=elapsed_ms,
             hashes=hashes, assembly_info=assembly_info, detected_protectors=detected_protectors,
             pe_diag=pe_diag, overlay_bytes=overlay_bytes, pe_size=pe_size, xor_result=xor_result,
             costura_detect=costura_detect, costura_payloads=costura_payloads,
@@ -557,60 +553,32 @@ class DotNetPackerCore:
         }
 
     @classmethod
-    def route_native(
-        cls,
-        input_path: str,
-        target_os: str = "windows",
-        target_arch: str = "x64",
-    ) -> Dict[str, Any]:
+    def route_native(cls, input_path: str, target_os: str = "windows", target_arch: str = "x64") -> Dict[str, Any]:
         """Simulates dynamic loader routing and platform resolution for given OS and architecture."""
         with open(input_path, "rb") as f:
-            data = f.read()
-        return NativeDemuxerUnpacker.route(data, target_os=target_os, target_arch=target_arch)
+            return NativeDemuxerUnpacker.route(f.read(), target_os=target_os, target_arch=target_arch)
 
     @classmethod
-    def unpack_native_dir(
-        cls,
-        input_path: str,
-        output_dir: str,
-        target_arch: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    def unpack_native_dir(cls, input_path: str, output_dir: str, target_arch: Optional[str] = None) -> Dict[str, Any]:
         """Demuxes native multi-architecture binaries and exports to architecture-organized directory."""
         with open(input_path, "rb") as f:
-            data = f.read()
-        return NativeDemuxerUnpacker.unpack_to_directory(
-            data, output_dir=output_dir, target_arch=target_arch
-        )
+            return NativeDemuxerUnpacker.unpack_to_directory(f.read(), output_dir=output_dir, target_arch=target_arch)
 
     @classmethod
     def generate_threat_rules(
-        cls,
-        input_path: str,
-        granularity: str = "behavioral",
-        rule_format: str = "combined",
-        options: Optional[Dict[str, Any]] = None,
+        cls, input_path: str, granularity: str = "behavioral", rule_format: str = "combined", options: Optional[Dict[str, Any]] = None
     ) -> RuleGenerationResult:
         """Synthesizes dynamic YARA and Sigma rules from input binary."""
         return ThreatRuleEngine.synthesize_from_file(
-            input_path,
-            granularity=RuleGranularity(granularity.lower()),
-            rule_format=RuleFormat(rule_format.lower()),
-            options=options,
+            input_path, granularity=RuleGranularity(granularity.lower()), rule_format=RuleFormat(rule_format.lower()), options=options
         )
 
     @classmethod
     def export_threat_rules(
-        cls,
-        input_path: str,
-        output_dir: str,
-        granularity: str = "behavioral",
-        rule_format: str = "combined",
-        options: Optional[Dict[str, Any]] = None,
+        cls, input_path: str, output_dir: str, granularity: str = "behavioral", rule_format: str = "combined", options: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Synthesizes and exports detection rules and JSON manifest to target directory."""
-        res = cls.generate_threat_rules(
-            input_path, granularity=granularity, rule_format=rule_format, options=options
-        )
+        res = cls.generate_threat_rules(input_path, granularity=granularity, rule_format=rule_format, options=options)
         return ThreatRuleEngine.export_to_directory(res, output_dir=output_dir)
 
     @classmethod
@@ -621,8 +589,7 @@ class DotNetPackerCore:
     @classmethod
     def export_mixed_mode(cls, input_path: str, output_dir: str) -> Dict[str, Any]:
         """Analyzes mixed-mode PE and exports manifests, transitions, and VTFixup tables."""
-        res = cls.analyze_mixed_mode(input_path)
-        return MixedModeAnalyzer.export_to_directory(res, output_dir=output_dir)
+        return MixedModeAnalyzer.export_to_directory(cls.analyze_mixed_mode(input_path), output_dir=output_dir)
 
     @classmethod
     def analyze_cfg(cls, input_path: str, max_methods: int = 50) -> CFGAnalysisResult:
@@ -631,16 +598,11 @@ class DotNetPackerCore:
 
     @classmethod
     def export_cfg(
-        cls,
-        input_path: str,
-        output_dir: str,
-        formats: Optional[List[str]] = None,
-        max_exported_methods: int = 15,
+        cls, input_path: str, output_dir: str, formats: Optional[List[str]] = None, max_exported_methods: int = 15
     ) -> Dict[str, Any]:
         """Analyzes binary CFG and exports visual diagrams, JSON manifests, and telemetry reports."""
-        res = cls.analyze_cfg(input_path)
         return CFGAnalyzer.export_to_directory(
-            res, output_dir=output_dir, formats=formats, max_exported_methods=max_exported_methods
+            cls.analyze_cfg(input_path), output_dir=output_dir, formats=formats, max_exported_methods=max_exported_methods
         )
 
     @classmethod
@@ -649,17 +611,65 @@ class DotNetPackerCore:
         return BamlDecompiler.decompile_file(input_path)
 
     @classmethod
-    def export_baml(
-        cls,
-        input_path: str,
-        output_dir: str,
-        export_raw_baml: bool = False,
-    ) -> Dict[str, Any]:
+    def export_baml(cls, input_path: str, output_dir: str, export_raw_baml: bool = False) -> Dict[str, Any]:
         """Extracts and decompiles BAML streams and exports XAML documents to disk."""
-        res = cls.analyze_baml(input_path)
         return BamlDecompiler.export_to_directory(
-            res, output_dir=output_dir, export_raw_baml=export_raw_baml
+            cls.analyze_baml(input_path), output_dir=output_dir, export_raw_baml=export_raw_baml
         )
+
+    @classmethod
+    def run_fuzzing_campaign(
+        cls, target_path: Optional[str] = None, iterations: int = 50, seed: int = 1337,
+        targets: Optional[List[str]] = None, timeout_sec: float = 3.0, output_dir: Optional[str] = None,
+        is_64bit: bool = False, isolate_process: bool = False,
+    ) -> FuzzCampaignResult:
+        """Executes automated regression fuzzing campaign across forensic targets."""
+        base_binary = None
+        if target_path:
+            if not os.path.exists(target_path):
+                raise FileNotFoundError(f"Fuzzing target file not found: {target_path}")
+            with open(target_path, "rb") as f:
+                base_binary = f.read()
+        elif is_64bit:
+            base_binary = SyntheticMutatedBinaryGenerator.generate_baseline_pe(is_64bit=True)
+        parsed_targets = [FuzzTarget.from_str(t) for t in targets] if targets else None
+        return RegressionFuzzingHarness.run_campaign(
+            base_binary=base_binary, iterations=iterations, seed=seed,
+            targets=parsed_targets, timeout_sec=timeout_sec, output_dir=output_dir,
+            isolate_process=isolate_process,
+        )
+
+    @classmethod
+    def generate_synthetic_corpus(
+        cls, base_path: Optional[str] = None, count: int = 10, seed: int = 42,
+        output_dir: Optional[str] = None, is_64bit: bool = False,
+    ) -> List[Dict[str, Any]]:
+        """Generates and optionally exports a corpus of synthetic mutated binaries."""
+        base_binary = None
+        if base_path:
+            if not os.path.exists(base_path):
+                raise FileNotFoundError(f"Base binary file not found: {base_path}")
+            with open(base_path, "rb") as f:
+                base_binary = f.read()
+        elif is_64bit:
+            base_binary = SyntheticMutatedBinaryGenerator.generate_baseline_pe(is_64bit=True)
+        corpus = SyntheticMutatedBinaryGenerator.generate_corpus(base_binary=base_binary, count=count, seed=seed)
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+        results = []
+        for i, (m_bytes, recs) in enumerate(corpus):
+            sha = hashlib.sha256(m_bytes).hexdigest()
+            fname = f"synthetic_mutant_{i+1:03d}_{sha[:8]}.bin"
+            item = {"index": i + 1, "file_name": fname, "sha256": sha, "size_bytes": len(m_bytes), "mutations_count": len(recs)}
+            if output_dir:
+                p = os.path.join(output_dir, fname)
+                with open(p, "wb") as f_out:
+                    f_out.write(m_bytes)
+                item["path"] = p
+            results.append(item)
+        return results
+
+
 
 
 

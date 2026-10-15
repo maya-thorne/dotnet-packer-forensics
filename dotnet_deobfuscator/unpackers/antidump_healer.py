@@ -268,14 +268,14 @@ class AntiDumpHealer:
         total_size = cls.align_up(dll_name_offset + len(dll_name) + 16, 16)
         blob = bytearray(total_size)
 
-        iat_rva = target_rva + iat_thunk_offset
-        int_rva = target_rva + int_thunk_offset
-        name_rva = target_rva + dll_name_offset
-        ibn_rva = target_rva + import_by_name_offset
+        iat_rva = (target_rva + iat_thunk_offset) & 0xFFFFFFFF
+        int_rva = (target_rva + int_thunk_offset) & 0xFFFFFFFF
+        name_rva = (target_rva + dll_name_offset) & 0xFFFFFFFF
+        ibn_rva = (target_rva + import_by_name_offset) & 0xFFFFFFFF
 
         # 1. Entry point jump: FF 25 <absolute VA of IAT>
         blob[0:2] = b"\xFF\x25"
-        struct.pack_into("<I", blob, 2, image_base + iat_rva)
+        struct.pack_into("<I", blob, 2, (image_base + iat_rva) & 0xFFFFFFFF)
 
         # 2. IMAGE_IMPORT_DESCRIPTOR
         desc_offset = thunk_len
@@ -458,7 +458,7 @@ class AntiDumpHealer:
         if options.reconstruct_iat:
             # Place import section after the highest current section
             highest_va = max((s.virtual_address + cls.align_up(s.virtual_size, sec_align) for s in raw_sections), default=0x2000)
-            import_va = cls.align_up(highest_va, sec_align)
+            import_va = cls.align_up(highest_va, sec_align) & 0xFFFFFFFF
             import_block, import_desc_rva, iat_rva, synthesized_import = cls.build_clr_import_table(
                 image_base=image_base, target_rva=import_va, is_dll=is_dll
             )
@@ -519,12 +519,14 @@ class AntiDumpHealer:
             content_len = len(sec_bytes)
             aligned_raw_size = cls.align_up(content_len, file_align)
             if aligned_raw_size == 0 and sec.virtual_size > 0:
-                aligned_raw_size = cls.align_up(sec.virtual_size, file_align)
+                aligned_raw_size = min(cls.align_up(sec.virtual_size, file_align), 0x1000)
+            aligned_raw_size = min(aligned_raw_size, 20 * 1024 * 1024)
 
-            sec.raw_ptr = current_file_offset
-            sec.raw_size = aligned_raw_size
+            sec.raw_ptr = current_file_offset & 0xFFFFFFFF
+            sec.raw_size = aligned_raw_size & 0xFFFFFFFF
             if sec.virtual_size == 0:
                 sec.virtual_size = content_len
+            sec.virtual_size = sec.virtual_size & 0xFFFFFFFF
 
             sec.entropy = cls.calculate_entropy(sec_bytes)
             if b"BSJB" in sec_bytes:
@@ -554,7 +556,7 @@ class AntiDumpHealer:
         # -------------------------------------------------------------
         # Step 6: Recalculate SizeOfImage
         # -------------------------------------------------------------
-        highest_extent = max((s.virtual_address + cls.align_up(s.virtual_size, sec_align) for s in raw_sections), default=0x4000)
+        highest_extent = max((s.virtual_address + cls.align_up(s.virtual_size, sec_align) for s in raw_sections), default=0x4000) & 0xFFFFFFFF
         struct.pack_into("<I", rebuilt, pe_offset + 80, highest_extent)
         telemetry.actions.append(f"Updated SizeOfImage -> 0x{highest_extent:X}")
 

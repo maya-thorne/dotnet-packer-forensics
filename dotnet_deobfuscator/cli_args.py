@@ -13,7 +13,9 @@ def build_parser() -> argparse.ArgumentParser:
         prog="dotnet-packer-re",
         description="Static Forensic Unpacker & Obfuscation Analyzer for .NET & PE Binaries.",
     )
-    parser.add_argument("target", help="Path to target executable (.exe/.dll)")
+    parser.add_argument(
+        "target", nargs="?", default=None, help="Path to target executable (.exe/.dll)"
+    )
     parser.add_argument(
         "-o", "--output", help="Write decrypted unpacked payload to specified file or directory"
     )
@@ -251,6 +253,58 @@ def build_parser() -> argparse.ArgumentParser:
         "--baml-raw",
         action="store_true",
         help="Also export raw binary .baml streams alongside decompiled .xaml files",
+    )
+    parser.add_argument(
+        "--fuzz",
+        action="store_true",
+        help="Execute automated regression fuzzing campaign across forensic targets",
+    )
+    parser.add_argument(
+        "--fuzz-iterations",
+        type=int,
+        default=50,
+        help="Number of iterations for fuzzing campaign (default: 50)",
+    )
+    parser.add_argument(
+        "--fuzz-seed",
+        type=lambda x: int(x, 0),
+        default=1337,
+        help="PRNG seed for deterministic fuzzing campaign (default: 1337)",
+    )
+    parser.add_argument(
+        "--fuzz-targets",
+        help="Comma-separated target subsystems to fuzz (all, analyze, rebuild, verify, cfg, baml, mixed_mode, antidump, antitamper, rules, default: all)",
+    )
+    parser.add_argument(
+        "--fuzz-timeout",
+        type=float,
+        default=3.0,
+        help="Per-iteration execution timeout limit in seconds (default: 3.0)",
+    )
+    parser.add_argument(
+        "--fuzz-out",
+        help="Directory path to export fuzzing campaign report, crashing seeds, and regression ledger",
+    )
+    parser.add_argument(
+        "--fuzz-64",
+        action="store_true",
+        help="Generate 64-bit (PE32+) synthetic baseline binary instead of 32-bit (PE32)",
+    )
+    parser.add_argument(
+        "--fuzz-isolate",
+        action="store_true",
+        help="Execute fuzz targets in isolated child OS processes to withstand fatal crashes",
+    )
+    parser.add_argument(
+        "--gen-mutants",
+        action="store_true",
+        help="Generate synthetic mutated binary corpus without executing fuzzing campaign",
+    )
+    parser.add_argument(
+        "--mutant-count",
+        type=int,
+        default=10,
+        help="Number of synthetic mutated binaries to generate (default: 10)",
     )
     parser.add_argument(
         "--format", choices=["text", "json"], default="text", help="Telemetry format (text or json)"
