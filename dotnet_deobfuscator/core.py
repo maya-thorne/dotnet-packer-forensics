@@ -19,6 +19,7 @@ from .unpackers.antidump_models import AntiDumpHealOptions, AntiDumpHealResult
 from .unpackers.native_demuxer import NativeDemuxerUnpacker
 from .rules import RuleFormat, RuleGranularity, RuleGenerationResult, ThreatRuleEngine
 from .mixed_mode import MixedModeAnalyzer, MixedModeAnalysisResult
+from .cfg import CFGAnalyzer, CFGAnalysisResult, MethodCFG
 from .unpackers.armdot import ArmDotOpcodeTable, ArmDotUnpacker, ArmDotVMDisassembler
 from .unpackers.babel import BabelUnpacker
 from .unpackers.confuserex import ConfuserExUnpacker
@@ -127,6 +128,10 @@ class DotNetPackerCore:
         mixed_mode_res = MixedModeAnalyzer.analyze(data, file_name=os.path.basename(file_path))
         mixed_mode_telemetry = mixed_mode_res.telemetry.to_dict()
 
+        # 19. CIL Control Flow Graph (CFG) & High-Entropy Block Diagnostics
+        cfg_res = CFGAnalyzer.analyze(data, file_name=os.path.basename(file_path))
+        cfg_telemetry = cfg_res.telemetry.to_dict()
+
         return build_analysis_report(
             file_path=file_path, file_size=file_size, elapsed_ms=elapsed_ms,
             hashes=hashes, assembly_info=assembly_info, detected_protectors=detected_protectors,
@@ -142,6 +147,7 @@ class DotNetPackerCore:
             antitamper_detect=antitamper_detect, antidump_detect=antidump_detect,
             native_demux_detect=native_demux_detect, native_demux_payloads=native_demux_payloads,
             threat_rules_telemetry=threat_rules_telemetry, mixed_mode_telemetry=mixed_mode_telemetry,
+            cfg_telemetry=cfg_telemetry,
         )
 
 
@@ -694,4 +700,24 @@ class DotNetPackerCore:
         """Analyzes mixed-mode PE and exports manifests, transitions, and VTFixup tables."""
         res = cls.analyze_mixed_mode(input_path)
         return MixedModeAnalyzer.export_to_directory(res, output_dir=output_dir)
+
+    @classmethod
+    def analyze_cfg(cls, input_path: str, max_methods: int = 50) -> CFGAnalysisResult:
+        """Performs static CIL control flow graph and entropy analysis on binary."""
+        return CFGAnalyzer.analyze_file(input_path, max_methods=max_methods)
+
+    @classmethod
+    def export_cfg(
+        cls,
+        input_path: str,
+        output_dir: str,
+        formats: Optional[List[str]] = None,
+        max_exported_methods: int = 15,
+    ) -> Dict[str, Any]:
+        """Analyzes binary CFG and exports visual diagrams, JSON manifests, and telemetry reports."""
+        res = cls.analyze_cfg(input_path)
+        return CFGAnalyzer.export_to_directory(
+            res, output_dir=output_dir, formats=formats, max_exported_methods=max_exported_methods
+        )
+
 

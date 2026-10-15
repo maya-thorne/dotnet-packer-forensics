@@ -227,6 +227,28 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory path to export mixed-mode analysis manifest, transitions, and VTFixup tables",
     )
     parser.add_argument(
+        "--cfg",
+        action="store_true",
+        help="Generate CIL control flow graph and entropy analysis for assembly methods",
+    )
+    parser.add_argument(
+        "--cfg-token",
+        dest="cfg_token",
+        help="Target specific method token (e.g. 0x06000001) for CFG visualization",
+    )
+    parser.add_argument(
+        "--cfg-format",
+        dest="cfg_format",
+        choices=["mermaid", "dot", "svg", "ascii", "json", "all"],
+        default="all",
+        help="Visualization export format for CFG diagrams (default: all)",
+    )
+    parser.add_argument(
+        "--cfg-out",
+        dest="cfg_out",
+        help="Directory path to export CFG diagrams, vector SVG charts, and JSON manifests",
+    )
+    parser.add_argument(
         "--format", choices=["text", "json"], default="text", help="Telemetry format (text or json)"
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Display verbose section metrics")
@@ -643,6 +665,26 @@ def main(argv: Optional[list] = None) -> int:
                 sys.stdout.write(f"[+] Exported {len(exp_mm['exported_files'])} mixed-mode forensic files to -> {args.mixed_mode_out}\n")
         except Exception as e:
             sys.stderr.write(f"[-] Mixed-mode analysis failed: {e}\n")
+
+    # CIL Control Flow Graph (CFG) & High-Entropy Block Diagnostics
+    if args.cfg or args.cfg_out or args.cfg_token:
+        try:
+            cfg_res = DotNetPackerCore.analyze_cfg(args.target)
+            sys.stdout.write(
+                f"[+] CIL CFG Analysis: {cfg_res.telemetry.total_methods_analyzed} methods analyzed ({cfg_res.telemetry.total_blocks} blocks, {cfg_res.telemetry.total_edges} edges, peak complexity={cfg_res.telemetry.max_cyclomatic_complexity})\n"
+            )
+            if cfg_res.telemetry.high_entropy_blocks_total > 0:
+                sys.stdout.write(f"    [!] Identified {cfg_res.telemetry.high_entropy_blocks_total} high-entropy encrypted/packed basic blocks\n")
+            if cfg_res.telemetry.suspicious_methods:
+                sys.stdout.write("    [!] Suspicious Methods:\n")
+                for sm in cfg_res.telemetry.suspicious_methods[:4]:
+                    sys.stdout.write(f"        * {sm}\n")
+            if args.cfg_out:
+                formats = [args.cfg_format] if args.cfg_format != "all" else None
+                exp_cfg = DotNetPackerCore.export_cfg(args.target, output_dir=args.cfg_out, formats=formats)
+                sys.stdout.write(f"[+] Exported {exp_cfg['exported_files_count']} CFG diagram files to -> {args.cfg_out}\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] CFG analysis failed: {e}\n")
 
     if args.format == "json":
         sys.stdout.write(json.dumps(report, indent=2) + "\n")
