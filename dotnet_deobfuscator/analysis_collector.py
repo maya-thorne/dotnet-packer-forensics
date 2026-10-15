@@ -39,6 +39,7 @@ def build_analysis_report(
     native_demux_payloads: Optional[List[Dict[str, Any]]] = None,
     threat_rules_telemetry: Optional[Dict[str, Any]] = None,
     mixed_mode_telemetry: Optional[Dict[str, Any]] = None,
+    cfg_telemetry: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Assembles all subsystem forensic findings into a unified analysis report dictionary."""
     return {
@@ -246,5 +247,16 @@ def build_analysis_report(
             "anomalies": [],
             "risk_score": 0,
             "risk_severity": "informational",
+        },
+        "cfg_forensics": cfg_telemetry or {
+            "total_methods_analyzed": 0,
+            "total_blocks": 0,
+            "total_edges": 0,
+            "high_entropy_blocks_total": 0,
+            "max_cyclomatic_complexity": 1,
+            "complex_methods_count": 0,
+            "methods_with_dead_code": 0,
+            "average_method_entropy": 0.0,
+            "suspicious_methods": [],
         },
     }

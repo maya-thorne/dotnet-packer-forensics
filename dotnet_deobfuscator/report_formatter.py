@@ -310,6 +310,21 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
     else:
         lines.append(f"  [-] Standard {mixed.get('mixed_mode_type', 'pure_managed')} PE binary (no mixed-mode CIL-native transitions).")
 
+    cfg = report.get("cfg_forensics", {})
+    if cfg.get("total_methods_analyzed", 0) > 0:
+        lines.append("")
+        lines.append("--- [CIL Control Flow Graph (CFG) & Block Entropy Diagnostics] ---")
+        lines.append(f"  [+] Methods Analyzed   : {cfg.get('total_methods_analyzed', 0)} methods ({cfg.get('total_blocks', 0)} basic blocks, {cfg.get('total_edges', 0)} edges)")
+        lines.append(f"      Cyclomatic Health  : Peak Complexity = {cfg.get('max_cyclomatic_complexity', 1)} ({cfg.get('complex_methods_count', 0)} high-complexity methods)")
+        lines.append(f"      Entropy Metrics    : Avg Method Entropy = {cfg.get('average_method_entropy', 0.0):.4f} / 8.000")
+        if cfg.get("high_entropy_blocks_total", 0) > 0:
+            lines.append(f"  [!] High Entropy Blocks: {cfg.get('high_entropy_blocks_total')} encrypted or packed bytecode blocks identified")
+        if cfg.get("methods_with_dead_code", 0) > 0:
+            lines.append(f"  [!] Dead Code Detected : {cfg.get('methods_with_dead_code')} method(s) contain unreachable instructions")
+        if cfg.get("suspicious_methods"):
+            for sm in cfg.get("suspicious_methods", [])[:3]:
+                lines.append(f"      * {sm}")
+
     if verbose and report.get("sections"):
         lines.append("")
         lines.append("--- [Section Topology & Entropy] ---")

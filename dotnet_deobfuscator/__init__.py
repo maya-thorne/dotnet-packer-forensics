@@ -141,8 +141,24 @@ from .mixed_mode import (
     VTFixupType,
     zeroize_buffer,
 )
+from .cfg import (
+    BlockAnomalyFlag,
+    BlockEntropyLevel,
+    CFGAnalysisResult,
+    CFGAnalyzer,
+    CFGBlock,
+    CFGBuilder,
+    CFGEdge,
+    CFGEdgeType,
+    CFGInstruction,
+    CFGTelemetry,
+    CFGVisualizer,
+    CILDisassembler,
+    DiagramFormat,
+    MethodCFG,
+)
 
-__version__ = "2.5.0"
+__version__ = "2.6.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -261,6 +277,20 @@ __all__ = [
     "TransitionType",
     "RiskSeverity",
     "zeroize_buffer",
+    "CFGAnalyzer",
+    "CFGBuilder",
+    "CILDisassembler",
+    "CFGVisualizer",
+    "CFGBlock",
+    "CFGEdge",
+    "CFGEdgeType",
+    "CFGInstruction",
+    "BlockEntropyLevel",
+    "BlockAnomalyFlag",
+    "DiagramFormat",
+    "MethodCFG",
+    "CFGTelemetry",
+    "CFGAnalysisResult",
     "__version__",
 ]
 

@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2026-10-15
+
+### Added
+- **CIL Control Flow Graph (CFG) Generator & High-Entropy Block Visualizer (`dotnet_deobfuscator.cfg`)**:
+  - Full ECMA-335 CIL instruction disassembler (`CILDisassembler`) decoding 1-byte opcodes (0x00–0xDF), 2-byte opcodes (0xFE00–0xFE1E), short/long relative branches, and switch tables with exact byte offset resolutions.
+  - Basic block partitioner and graph constructor (`CFGBuilder`) identifying branch leaders, slicing instruction spans, connecting directed edges across fallthrough, conditional true/false, unconditional jumps, and multi-way switch cases.
+  - Precise McCabe cyclomatic complexity calculation modeling branch decision points ($M = 1 + \\sum(\\text{out-degree} - 1)$) and depth-first search (DFS) traversal detecting back-edges, cycle headers, and natural loops.
+  - Unreachable dead code analyzer flagging disconnected basic blocks following unconditional returns or throws.
+  - Bytecode Shannon entropy profiler measuring informational density per basic block (Low < 3.0, Normal 3.0–5.5, Suspicious 5.5–6.8, High >= 6.8) to detect encrypted method stubs, packed shellcode payloads, and arithmetic mutations.
+  - Multi-format visualization suite (`CFGVisualizer`) producing GitHub-compatible Mermaid flowcharts with entropy class styling, Graphviz DOT specifications with HTML-like record tables, self-contained XML-compliant SVG vector diagrams (with zero external images), terminal ASCII box layouts, and structured JSON graphs.
+  - Unified orchestration facade (`CFGAnalyzer`) scanning assemblies for CorILMethod Tiny/Fat headers, computing aggregate telemetry, and exporting visualization suites via safe path traversal sanitization (`_safe_path`).
+  - Cryptographic memory sanitization (`zeroize_buffer`) using `ctypes.memset` to scrub intermediate disassembly bytecode slices from process memory.
+- **CLI & Core Orchestrator Integration**:
+  - Added `--cfg` CLI flag to trigger static CIL control flow graph analysis and report method complexity and entropy metrics.
+  - Added `--cfg-token <TOKEN>` CLI flag to inspect a specific method token (e.g. `0x06000001`).
+  - Added `--cfg-format <mermaid|dot|svg|ascii|json|all>` CLI flag configuring visualization output formats.
+  - Added `--cfg-out <DIR>` CLI flag to export visual diagrams, SVG vector charts, and JSON manifests to disk.
+  - Integrated CFG forensics telemetry into `DotNetPackerCore.analyze_file`, `DotNetPackerCore.analyze_cfg`, `DotNetPackerCore.export_cfg`, `analysis_collector.py`, and `report_formatter.py`.
+- **Comprehensive CFG Visualizer Test Suite (`tests/test_cfg_visualizer.py`)**:
+  - 19 dedicated unit and integration tests covering disassembler opcodes, branch targets, switch tables, linear/if-else/loop/dead-code CFG topologies, cyclomatic complexity calculations, Shannon entropy tiers, Mermaid, DOT, valid XML SVG parsing, ASCII output, directory export manifests, and path traversal defenses (expanding total test suite to 287 passing tests).
+
 ## [2.5.0] - 2026-10-14
 
 ### Added
