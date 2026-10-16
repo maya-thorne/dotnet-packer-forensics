@@ -75,6 +75,41 @@ def main(argv: Optional[list] = None) -> int:
             sys.stderr.write(f"[-] Synthetic mutant generation failed: {e}\n")
             return 1
 
+    # Batch Directory Forensic Scanner Mode
+    if args.batch is not None:
+        try:
+            target_dir = args.batch if (args.batch and args.batch != "") else args.target
+            if not target_dir:
+                sys.stderr.write("[-] Error: Target directory for batch scanning is required\n")
+                return 2
+
+            from .batch import BatchForensicEngine, BatchReporter, BatchScanOptions
+            options = BatchScanOptions(
+                target_dir=target_dir,
+                recursive=args.batch_recursive,
+                workers=args.batch_workers,
+                pattern=args.batch_pattern,
+                timeout_sec=args.batch_timeout,
+                min_size_bytes=args.batch_min_size,
+                max_size_bytes=args.batch_max_size,
+                unpack_payloads=bool(args.output or args.unpack_dir),
+                unpack_out_dir=args.output or args.unpack_dir,
+                output_dir=args.batch_out,
+                json_out=args.batch_json,
+                csv_out=args.batch_csv,
+                html_out=args.batch_html,
+                master_key=args.key,
+            )
+            batch_report = BatchForensicEngine.run(options)
+            if args.format == "json":
+                sys.stdout.write(json.dumps(batch_report.to_dict(), indent=2, ensure_ascii=False) + "\n")
+            else:
+                sys.stdout.write(BatchReporter.format_console_table(batch_report) + "\n")
+            return 0
+        except Exception as e:
+            sys.stderr.write(f"[-] Batch forensic scan failed: {e}\n")
+            return 1
+
     if not args.target:
         parser.print_usage(sys.stderr)
         sys.stderr.write("[-] Error: the following arguments are required: target\n")

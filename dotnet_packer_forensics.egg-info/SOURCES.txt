@@ -21,12 +21,21 @@ dotnet_deobfuscator/baml/reader.py
 dotnet_deobfuscator/baml/resource_extractor.py
 dotnet_deobfuscator/baml/tokens.py
 dotnet_deobfuscator/baml/xml_emitter.py
+dotnet_deobfuscator/batch/__init__.py
+dotnet_deobfuscator/batch/engine.py
+dotnet_deobfuscator/batch/models.py
+dotnet_deobfuscator/batch/reporter.py
+dotnet_deobfuscator/batch/scanner.py
 dotnet_deobfuscator/cfg/__init__.py
 dotnet_deobfuscator/cfg/analyzer.py
 dotnet_deobfuscator/cfg/builder.py
 dotnet_deobfuscator/cfg/disassembler.py
 dotnet_deobfuscator/cfg/models.py
 dotnet_deobfuscator/cfg/visualizer.py
+dotnet_deobfuscator/fuzzing/__init__.py
+dotnet_deobfuscator/fuzzing/generator.py
+dotnet_deobfuscator/fuzzing/harness.py
+dotnet_deobfuscator/fuzzing/models.py
 dotnet_deobfuscator/mixed_mode/__init__.py
 dotnet_deobfuscator/mixed_mode/analyzer.py
 dotnet_deobfuscator/mixed_mode/models.py
@@ -74,6 +83,7 @@ tests/test_antitamper_unpacker.py
 tests/test_armdot_unpacker.py
 tests/test_babel_unpacker.py
 tests/test_baml_decompiler.py
+tests/test_batch_scanner.py
 tests/test_cfg_visualizer.py
 tests/test_cli.py
 tests/test_confuserex_unpacker.py
@@ -81,6 +91,7 @@ tests/test_costura_unpacker.py
 tests/test_deepsea_unpacker.py
 tests/test_dotnet_analyzer.py
 tests/test_eazfuscator_unpacker.py
+tests/test_fuzzing_harness.py
 tests/test_intellilock_unpacker.py
 tests/test_mixed_mode.py
 tests/test_native_demuxer.py

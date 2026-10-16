@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: dotnet-packer-forensics
-Version: 2.7.0
+Version: 2.9.0
 Summary: Static Forensic Unpacker & Obfuscation Analyzer for .NET & PE Binaries
 Author: Maya Thorne
 License: MT-SRL
@@ -112,7 +112,7 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 ### CLI Options Matrix
 | Flag | Description | Default |
 | :--- | :--- | :---: |
-| `target` | Path to target executable (`.exe` / `.dll`) | *Required* |
+| `target` | Path to target executable (`.exe` / `.dll`) (optional if `--fuzz` or `--gen-mutants`) | *Required\** |
 | `-o, --output` | Output file path or directory for extracted payload | None |
 | `-d, --unpack-dir` | Directory path to extract all embedded Costura & ConfuserEx assemblies | None |
 | `--dump-strings` | Extract and dump decrypted ConfuserEx constants and literal strings | `False` |
@@ -176,10 +176,18 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `--verify-against` | Reference binary path to perform bitwise byte divergence comparison against | None |
 | `--expected-sha256` | Expected SHA-256 golden hash digest to enforce verification against | None |
 | `--strict-pe` | Enforce strict PE header bounds and treat structural warnings as failures | `False` |
+| `--fuzz` | Execute regression fuzzing campaign across target deobfuscation stages | `False` |
+| `--fuzz-iterations` | Number of fuzzing iterations per target stage | `50` |
+| `--fuzz-seed` | Master PRNG seed for deterministic fuzzing mutation generation | `1337` |
+| `--fuzz-targets` | Comma-delimited list of fuzzing targets (`all`, `analyze`, `rebuild`, `verify`, `cfg`, `baml`, `mixed_mode`, `antidump`, `antitamper`, `rules`) | `all` |
+| `--fuzz-timeout` | Maximum execution timeout in seconds per fuzz iteration | `3.0` |
+| `--fuzz-out` | Output directory path for fuzz campaign reports, crashes, and regression ledger | None |
+| `--gen-mutants` | Generate standalone synthetic mutated PE corpus and export to disk | `False` |
+| `--mutant-count` | Number of synthetic mutated binary test cases to generate | `10` |
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v2.7.0` |
+| `--version` | Display engine version and exit | `v2.8.0` |
 
 
 </details>
@@ -469,6 +477,21 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><b>Mixed-Mode Analyzer &amp; Exporter</b></td>
       <td>Orchestrates PE/Cor20 inspection, threat risk scoring, and safe directory exports with path traversal defenses.</td>
     </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/fuzzing/models.py</code></td>
+      <td><b>Fuzzing Data Models &amp; Ledger</b></td>
+      <td>Encapsulates MutationStrategy, FuzzTarget, CrashSeverity, telemetry records, and persistent JSON RegressionLedger.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/fuzzing/generator.py</code></td>
+      <td><b>Synthetic Binary Generator &amp; Mutator</b></td>
+      <td>Constructs structural baseline PE assemblies and applies 11 deterministic structural mutation operators.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/fuzzing/harness.py</code></td>
+      <td><b>Regression Fuzzing Harness &amp; Exporter</b></td>
+      <td>Executes sandboxed fuzzing across pipeline targets with crash triage, timeout enforcement, and bundle export.</td>
+    </tr>
   </tbody>
 </table>
 
@@ -603,6 +626,11 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>tests/test_mixed_mode.py</code></td>
       <td><b>Native Mixed-Mode PE &amp; Transition Tracer Test</b></td>
       <td>Validates pure managed/native/IJWH classification, native entry points, 32/64-bit VTFixups, unmanaged export bridges, TLS callbacks, risk scoring, safe exports, and CLI flags.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_fuzzing_harness.py</code></td>
+      <td><b>Regression Fuzzing Harness &amp; Mutator Test</b></td>
+      <td>Validates baseline PE generation, 11 mutation operators, sandboxed target triage, crash bundling, timeout detection, ledger persistence, path traversal defense, and CLI options.</td>
     </tr>
   </tbody>
 </table>
