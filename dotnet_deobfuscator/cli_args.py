@@ -364,6 +364,32 @@ def build_parser() -> argparse.ArgumentParser:
         default=100 * 1024 * 1024,
         help="Maximum file size threshold in bytes to include in scan (default: 104857600)",
     )
+    # Native AOT & ReadyToRun (R2R) Forensics
+    parser.add_argument(
+        "--native-aot",
+        action="store_true",
+        help="Enable deep Native AOT & ReadyToRun (R2R) forensic inspection and detailed telemetry",
+    )
+    parser.add_argument(
+        "--r2r-disasm",
+        action="store_true",
+        help="Disassemble precompiled native code methods from ReadyToRun runtime functions or AOT stubs",
+    )
+    parser.add_argument(
+        "--aot-symbols",
+        action="store_true",
+        help="Extract and display recovered Native AOT symbols, exports, and Redhawk runtime helpers",
+    )
+    parser.add_argument(
+        "--native-aot-out",
+        help="Directory path to export parsed symbols (CSV), R2R sections, and disassembled methods (TXT/JSON)",
+    )
+    parser.add_argument(
+        "--native-aot-max-methods",
+        type=int,
+        default=50,
+        help="Maximum number of methods to disassemble in Native AOT / R2R analysis (default: 50)",
+    )
     parser.add_argument(
         "--format", choices=["text", "json"], default="text", help="Telemetry format (text or json)"
     )

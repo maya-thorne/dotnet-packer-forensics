@@ -23,6 +23,7 @@ from .rules import RuleFormat, RuleGranularity, RuleGenerationResult, ThreatRule
 from .mixed_mode import MixedModeAnalyzer, MixedModeAnalysisResult
 from .cfg import CFGAnalyzer, CFGAnalysisResult, MethodCFG
 from .baml import BamlDecompiler, BamlExtractionResult
+from .native_aot import NativeAOTAnalysisResult, NativeAOTAnalyzer
 from .unpacker_dispatcher import unpack_payload_to_file, unpack_all_to_dir
 from .unpackers.armdot import ArmDotOpcodeTable, ArmDotUnpacker, ArmDotVMDisassembler
 from .unpackers.babel import BabelUnpacker
@@ -128,6 +129,10 @@ class DotNetPackerCore:
         baml_res = BamlDecompiler.decompile_assembly_data(data, file_name=file_name)
         baml_telemetry = baml_res.telemetry.to_dict()
 
+        # 21. Native AOT & ReadyToRun (R2R) PE Forensics
+        native_aot_res = NativeAOTAnalyzer.analyze(data, file_name=file_name)
+        native_aot_telemetry = native_aot_res.telemetry.to_dict()
+
         return build_analysis_report(
             file_path=file_name, file_size=file_size, elapsed_ms=elapsed_ms,
             hashes=hashes, assembly_info=assembly_info, detected_protectors=detected_protectors,
@@ -144,6 +149,7 @@ class DotNetPackerCore:
             native_demux_detect=native_demux_detect, native_demux_payloads=native_demux_payloads,
             threat_rules_telemetry=threat_rules_telemetry, mixed_mode_telemetry=mixed_mode_telemetry,
             cfg_telemetry=cfg_telemetry, baml_telemetry=baml_telemetry,
+            native_aot_telemetry=native_aot_telemetry,
         )
 
 
@@ -190,10 +196,7 @@ class DotNetPackerCore:
 
     @classmethod
     def demangle_babel(
-        cls,
-        input_path: str,
-        output_path: Optional[str] = None,
-        custom_map: Optional[Union[Dict[str, str], str]] = None,
+        cls, input_path: str, output_path: Optional[str] = None, custom_map: Optional[Union[Dict[str, str], str]] = None
     ) -> Tuple[bytes, Dict[str, any]]:
         """Demangles Babel Obfuscator symbols and reconstructs cross-assembly dependency graph."""
         with open(input_path, "rb") as f:
@@ -238,10 +241,7 @@ class DotNetPackerCore:
 
     @classmethod
     def devirtualize_eazfuscator(
-        cls,
-        input_path: str,
-        output_path: Optional[str] = None,
-        custom_table: Optional[VMOpcodeTable] = None,
+        cls, input_path: str, output_path: Optional[str] = None, custom_table: Optional[VMOpcodeTable] = None
     ) -> Tuple[bytes, Dict[str, any]]:
         """De-virtualizes Eazfuscator.NET virtual machine methods and optionally writes restored PE to file."""
         with open(input_path, "rb") as f:
@@ -274,10 +274,7 @@ class DotNetPackerCore:
 
     @classmethod
     def devirtualize_armdot(
-        cls,
-        input_path: str,
-        output_path: Optional[str] = None,
-        custom_table: Optional[ArmDotOpcodeTable] = None,
+        cls, input_path: str, output_path: Optional[str] = None, custom_table: Optional[ArmDotOpcodeTable] = None
     ) -> Tuple[bytes, Dict[str, any]]:
         """De-virtualizes ArmDot virtual machine methods and optionally writes restored PE to file."""
         with open(input_path, "rb") as f:
@@ -347,34 +344,20 @@ class DotNetPackerCore:
 
     @classmethod
     def verify_payload(
-        cls,
-        target_path: str,
-        reference_path: Optional[str] = None,
-        expected_sha256: Optional[str] = None,
-        strict_pe: bool = False,
+        cls, target_path: str, reference_path: Optional[str] = None, expected_sha256: Optional[str] = None, strict_pe: bool = False
     ) -> PayloadVerificationResult:
         """Verifies payload cryptographic hashes, bitwise parity, and PE/CLR structure."""
         return PayloadVerifier.verify_payload_file(
-            target_path=target_path,
-            reference_path=reference_path,
-            expected_sha256=expected_sha256,
-            strict_pe=strict_pe,
+            target_path=target_path, reference_path=reference_path, expected_sha256=expected_sha256, strict_pe=strict_pe
         )
 
     @classmethod
     def verify_payload_buffer(
-        cls,
-        data: bytes,
-        reference_data: Optional[bytes] = None,
-        expected_sha256: Optional[str] = None,
-        strict_pe: bool = False,
+        cls, data: bytes, reference_data: Optional[bytes] = None, expected_sha256: Optional[str] = None, strict_pe: bool = False
     ) -> PayloadVerificationResult:
         """Verifies byte buffer cryptographic hashes, bitwise parity, and PE/CLR structure."""
         return PayloadVerifier.verify_payload_buffer(
-            payload_data=data,
-            reference_data=reference_data,
-            expected_sha256=expected_sha256,
-            strict_pe=strict_pe,
+            payload_data=data, reference_data=reference_data, expected_sha256=expected_sha256, strict_pe=strict_pe
         )
 
     @classmethod
@@ -693,4 +676,20 @@ class DotNetPackerCore:
         return BatchForensicEngine.export_reports(
             report, output_dir=output_dir, json_path=json_path, csv_path=csv_path, html_path=html_path
         )
+
+    @classmethod
+    def analyze_native_aot(cls, input_path: str, max_methods: int = 50) -> NativeAOTAnalysisResult:
+        """Performs static forensic inspection of binary for Native AOT and ReadyToRun characteristics."""
+        return NativeAOTAnalyzer.analyze_file(input_path, max_methods=max_methods)
+
+    @classmethod
+    def export_native_aot(
+        cls, input_path: str, output_dir: str, max_methods: int = 50, max_exported_methods: int = 25
+    ) -> Dict[str, Any]:
+        """Analyzes Native AOT / R2R binary and exports summary, sections, symbols, and disassembly."""
+        res = cls.analyze_native_aot(input_path, max_methods=max_methods)
+        return NativeAOTAnalyzer.export_to_directory(
+            res, output_dir=output_dir, max_exported_methods=max_exported_methods
+        )
+
 

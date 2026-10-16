@@ -555,6 +555,50 @@ def main(argv: Optional[list] = None) -> int:
         except Exception as e:
             sys.stderr.write(f"[-] BAML decompiler failed: {e}\n")
 
+    # Native AOT & ReadyToRun (R2R) Forensics
+    if args.native_aot or args.r2r_disasm or args.aot_symbols or args.native_aot_out:
+        try:
+            aot_res = DotNetPackerCore.analyze_native_aot(
+                args.target, max_methods=args.native_aot_max_methods
+            )
+            sys.stdout.write(
+                f"[+] Native AOT / R2R Inspection: {aot_res.telemetry.compilation_type} "
+                f"({aot_res.telemetry.inferred_dotnet_version}) - Arch: {aot_res.telemetry.target_arch.upper()}\n"
+            )
+            if aot_res.telemetry.compiler_identifier:
+                sys.stdout.write(f"    Compiler ID: {aot_res.telemetry.compiler_identifier}\n")
+            if aot_res.telemetry.r2r_sections_count > 0:
+                sys.stdout.write(f"    R2R Sections: {aot_res.telemetry.r2r_sections_count} sections\n")
+            if aot_res.telemetry.runtime_functions_count > 0:
+                sys.stdout.write(
+                    f"    Runtime Functions: {aot_res.telemetry.runtime_functions_count} methods "
+                    f"({aot_res.telemetry.method_entrypoints_count} mapped MethodDef entrypoints)\n"
+                )
+            if args.aot_symbols and aot_res.symbols:
+                sys.stdout.write(f"\n--- [Recovered Native Symbols: {len(aot_res.symbols)}] ---\n")
+                for s in aot_res.symbols[:20]:
+                    tok = f"0x{s.token:08X}" if s.token else "N/A"
+                    sys.stdout.write(f"  [{tok}] {hex(s.rva)}: {s.demangled_name} ({s.symbol_type})\n")
+            if args.r2r_disasm and aot_res.disassembled_methods:
+                sys.stdout.write(f"\n--- [Disassembled Methods: {len(aot_res.disassembled_methods)}] ---\n")
+                for dm in aot_res.disassembled_methods[:5]:
+                    sys.stdout.write(f"=== Method: {dm.name} ({dm.blocks_count} blocks, {dm.calls_count} calls) ===\n")
+                    for ins in dm.instructions[:8]:
+                        target = f" -> {hex(ins.target_rva)}" if ins.target_rva else ""
+                        helper = f" <{ins.helper_name}>" if ins.helper_name else ""
+                        sys.stdout.write(
+                            f"  0x{ins.offset:08X}:  {ins.raw_bytes:<12} {ins.mnemonic:<6} {ins.operands}{target}{helper}\n"
+                        )
+            if args.native_aot_out:
+                exp_aot = DotNetPackerCore.export_native_aot(
+                    args.target, output_dir=args.native_aot_out, max_methods=args.native_aot_max_methods
+                )
+                sys.stdout.write(
+                    f"[+] Exported {len(exp_aot['exported_files'])} AOT/R2R forensic files to -> {args.native_aot_out}\n"
+                )
+        except Exception as e:
+            sys.stderr.write(f"[-] Native AOT / R2R analysis failed: {e}\n")
+
     if args.format == "json":
         sys.stdout.write(json.dumps(report, indent=2) + "\n")
     else:

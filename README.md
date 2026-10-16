@@ -178,10 +178,15 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `--batch-timeout` | Per-file scanning execution timeout limit in seconds | `30.0` |
 | `--batch-min-size` | Minimum file size threshold in bytes to include in scan | `0` |
 | `--batch-max-size` | Maximum file size threshold in bytes to include in scan | `104857600` |
+| `--native-aot` | Enable deep Native AOT & ReadyToRun (R2R) forensic inspection and report | `False` |
+| `--r2r-disasm` | Disassemble precompiled native code methods from ReadyToRun runtime functions or AOT stubs | `False` |
+| `--aot-symbols` | Extract and display recovered Native AOT symbols, exports, and Redhawk runtime helpers | `False` |
+| `--native-aot-out` | Directory path to export parsed symbols (CSV), R2R sections, and disassembled methods (TXT/JSON) | None |
+| `--native-aot-max-methods` | Maximum number of methods to disassemble in Native AOT / R2R analysis | `50` |
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v2.9.0` |
+| `--version` | Display engine version and exit | `v2.10.0` |
 
 
 </details>
@@ -505,6 +510,31 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>dotnet_deobfuscator/batch/engine.py</code></td>
       <td><b>Batch Forensic Engine Facade</b></td>
       <td>Coordinates directory discovery, multi-threaded worker pools, payload extraction, and report generation workflows.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/native_aot/models.py</code></td>
+      <td><b>Native AOT &amp; R2R Models</b></td>
+      <td>Encapsulates CompilationType, R2RSectionType, AOTVersion, TargetArchitecture, R2R headers/sections, and security sanitizers.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/native_aot/r2r_parser.py</code></td>
+      <td><b>ReadyToRun Header &amp; Section Parser</b></td>
+      <td>Parses ReadyToRun headers, compiler identifiers, RUNTIME_FUNCTION arrays, and MethodDef entrypoint tables.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/native_aot/aot_symbol_parser.py</code></td>
+      <td><b>Native AOT Symbol &amp; Helper Parser</b></td>
+      <td>Scans Redhawk (Rhp*) runtime helpers, infers .NET 7/8/9 generation, and demangles C-style symbols into clean .NET names.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/native_aot/disassembler.py</code></td>
+      <td><b>Native Machine Code Disassembler</b></td>
+      <td>Decodes x64/x86 native machine instructions, resolves runtime helper call targets, and constructs basic block topologies.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/native_aot/analyzer.py</code></td>
+      <td><b>Native AOT Forensic Analyzer Facade</b></td>
+      <td>Orchestrates PE inspection, R2R/AOT classification, method disassembly, risk scoring, and safe directory exports.</td>
     </tr>
   </tbody>
 </table>
