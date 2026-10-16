@@ -307,6 +307,64 @@ def build_parser() -> argparse.ArgumentParser:
         help="Number of synthetic mutated binaries to generate (default: 10)",
     )
     parser.add_argument(
+        "--batch",
+        nargs="?",
+        const="",
+        default=None,
+        metavar="DIR",
+        help="Execute batch forensic scanning across directory of PE binaries",
+    )
+    parser.add_argument(
+        "--batch-recursive",
+        action="store_true",
+        help="Recursively scan subdirectories for candidate PE binaries",
+    )
+    parser.add_argument(
+        "--batch-workers",
+        type=int,
+        default=4,
+        help="Number of concurrent worker threads for directory scanning (default: 4)",
+    )
+    parser.add_argument(
+        "--batch-out",
+        help="Directory path to export batch reports (JSON, CSV, HTML dashboard)",
+    )
+    parser.add_argument(
+        "--batch-json",
+        help="Destination file path for batch scan JSON manifest report",
+    )
+    parser.add_argument(
+        "--batch-csv",
+        help="Destination file path for batch scan CSV summary report",
+    )
+    parser.add_argument(
+        "--batch-html",
+        help="Destination file path for self-contained offline HTML dashboard",
+    )
+    parser.add_argument(
+        "--batch-pattern",
+        default="*",
+        help="File glob pattern filter for candidate binaries (e.g. '*.exe;*.dll' or '*', default: '*')",
+    )
+    parser.add_argument(
+        "--batch-timeout",
+        type=float,
+        default=30.0,
+        help="Per-file scanning execution timeout limit in seconds (default: 30.0)",
+    )
+    parser.add_argument(
+        "--batch-min-size",
+        type=int,
+        default=0,
+        help="Minimum file size threshold in bytes to include in scan (default: 0)",
+    )
+    parser.add_argument(
+        "--batch-max-size",
+        type=int,
+        default=100 * 1024 * 1024,
+        help="Maximum file size threshold in bytes to include in scan (default: 104857600)",
+    )
+    parser.add_argument(
         "--format", choices=["text", "json"], default="text", help="Telemetry format (text or json)"
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Display verbose section metrics")

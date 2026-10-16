@@ -185,8 +185,20 @@ from .fuzzing import (
     RegressionLedger,
     SyntheticMutatedBinaryGenerator,
 )
+from .batch import (
+    BatchDirectoryScanner,
+    BatchForensicEngine,
+    BatchReporter,
+    BatchScanOptions,
+    BatchScanReport,
+    BatchScanSummary,
+    FileScanStatus,
+    SingleScanResult,
+    ThreatLevel,
+    safe_path,
+)
 
-__version__ = "2.8.0"
+__version__ = "2.9.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -343,6 +355,16 @@ __all__ = [
     "RegressionFuzzingHarness",
     "RegressionLedger",
     "SyntheticMutatedBinaryGenerator",
+    "BatchDirectoryScanner",
+    "BatchForensicEngine",
+    "BatchReporter",
+    "BatchScanOptions",
+    "BatchScanReport",
+    "BatchScanSummary",
+    "FileScanStatus",
+    "SingleScanResult",
+    "ThreatLevel",
+    "safe_path",
     "__version__",
 ]
 

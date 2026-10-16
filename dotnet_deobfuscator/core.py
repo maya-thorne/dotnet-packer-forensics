@@ -9,13 +9,7 @@ import struct
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from .fuzzing import (
-    FuzzCampaignResult,
-    FuzzTarget,
-    MutationStrategy,
-    RegressionFuzzingHarness,
-    SyntheticMutatedBinaryGenerator,
-)
+from .fuzzing import FuzzCampaignResult, FuzzTarget, MutationStrategy, RegressionFuzzingHarness, SyntheticMutatedBinaryGenerator
 from .analysis_collector import build_analysis_report
 from .dotnet_analyzer import DotNetAnalyzer
 from .payload_verifier import PayloadVerificationResult, PayloadVerifier
@@ -669,7 +663,34 @@ class DotNetPackerCore:
             results.append(item)
         return results
 
+    @classmethod
+    def batch_scan(
+        cls, target_dir: str, options: Optional[Any] = None, recursive: bool = False,
+        workers: int = 4, pattern: str = "*", timeout_sec: float = 30.0,
+        min_size_bytes: int = 0, max_size_bytes: int = 100 * 1024 * 1024,
+        pe_only: bool = True, unpack_payloads: bool = False, unpack_out_dir: Optional[str] = None,
+        output_dir: Optional[str] = None, json_out: Optional[str] = None,
+        csv_out: Optional[str] = None, html_out: Optional[str] = None, master_key: str = "randomkey",
+    ) -> Any:
+        """Executes multi-threaded batch forensic scanning across directory of PE binaries."""
+        from .batch import BatchForensicEngine, BatchScanOptions
+        if options is None:
+            options = BatchScanOptions(
+                target_dir=target_dir, recursive=recursive, workers=workers, pattern=pattern,
+                timeout_sec=timeout_sec, min_size_bytes=min_size_bytes, max_size_bytes=max_size_bytes,
+                pe_only=pe_only, unpack_payloads=unpack_payloads, unpack_out_dir=unpack_out_dir,
+                output_dir=output_dir, json_out=json_out, csv_out=csv_out, html_out=html_out, master_key=master_key,
+            )
+        return BatchForensicEngine.run(options)
 
-
-
+    @classmethod
+    def export_batch_report(
+        cls, report: Any, output_dir: Optional[str] = None, json_path: Optional[str] = None,
+        csv_path: Optional[str] = None, html_path: Optional[str] = None,
+    ) -> Dict[str, str]:
+        """Exports batch forensic report across JSON, CSV, and HTML dashboard formats."""
+        from .batch import BatchForensicEngine
+        return BatchForensicEngine.export_reports(
+            report, output_dir=output_dir, json_path=json_path, csv_path=csv_path, html_path=html_path
+        )
 

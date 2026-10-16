@@ -167,10 +167,21 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `--fuzz-out` | Output directory path for fuzz campaign reports, crashes, and regression ledger | None |
 | `--gen-mutants` | Generate standalone synthetic mutated PE corpus and export to disk | `False` |
 | `--mutant-count` | Number of synthetic mutated binary test cases to generate | `10` |
+| `--batch [DIR]` | Execute batch forensic scanning across directory of PE binaries | None |
+| `--batch-recursive` | Recursively scan subdirectories for candidate PE binaries | `False` |
+| `--batch-workers` | Number of concurrent worker threads for directory scanning | `4` |
+| `--batch-out` | Directory path to export batch reports (JSON, CSV, HTML dashboard) | None |
+| `--batch-json` | Destination file path for batch scan JSON manifest report | None |
+| `--batch-csv` | Destination file path for batch scan CSV summary report | None |
+| `--batch-html` | Destination file path for self-contained offline HTML dashboard | None |
+| `--batch-pattern` | File glob pattern filter for candidate binaries (e.g. `'*.exe;*.dll'`) | `'*'` |
+| `--batch-timeout` | Per-file scanning execution timeout limit in seconds | `30.0` |
+| `--batch-min-size` | Minimum file size threshold in bytes to include in scan | `0` |
+| `--batch-max-size` | Maximum file size threshold in bytes to include in scan | `104857600` |
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v2.8.0` |
+| `--version` | Display engine version and exit | `v2.9.0` |
 
 
 </details>
@@ -474,6 +485,26 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>dotnet_deobfuscator/fuzzing/harness.py</code></td>
       <td><b>Regression Fuzzing Harness &amp; Exporter</b></td>
       <td>Executes sandboxed fuzzing across pipeline targets with crash triage, timeout enforcement, and bundle export.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/batch/models.py</code></td>
+      <td><b>Batch Scan Models &amp; Sanitizers</b></td>
+      <td>Encapsulates FileScanStatus, ThreatLevel, BatchScanOptions, SingleScanResult, summary metrics, and safe path traversal defenses.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/batch/scanner.py</code></td>
+      <td><b>Multi-Threaded PE Directory Scanner</b></td>
+      <td>Discovers binaries with glob/size filtering, performs fast MZ/PE pre-filtering, and executes concurrent thread pool inspection with per-file timeouts.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/batch/reporter.py</code></td>
+      <td><b>Multi-Format Batch Reporter</b></td>
+      <td>Renders structured terminal console tables, CSV data exports, JSON manifests, and self-contained offline HTML dashboards with zero external CDN dependencies.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/batch/engine.py</code></td>
+      <td><b>Batch Forensic Engine Facade</b></td>
+      <td>Coordinates directory discovery, multi-threaded worker pools, payload extraction, and report generation workflows.</td>
     </tr>
   </tbody>
 </table>

@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.0] - 2026-10-16
+
+### Added
+- **Batch Forensic Automation CLI Engine & Multi-Threaded PE Directory Scanner (`dotnet_deobfuscator.batch`)**:
+  - Modular data models and security primitives (`models.py`): `FileScanStatus` (scanned, packed, clean, skipped, error, timeout), `ThreatLevel` (clean, low, medium, high, critical) with automated threat scoring and severity comparisons, `BatchScanOptions`, `SingleScanResult`, `BatchScanSummary`, and `BatchScanReport`.
+  - Memory sanitization (`zeroize_buffer`) using `ctypes.memset` to prevent memory leaks and strict path traversal defense (`safe_path`) preventing directory escape attacks.
+  - Multi-threaded PE directory scanner (`BatchDirectoryScanner` in `scanner.py`):
+    - Fast MZ and `PE\0\0` header pre-filter inspecting initial bytes to bypass non-executable files early without heavy CLR initialization.
+    - Concurrent worker pool utilizing `concurrent.futures.ThreadPoolExecutor` with thread-safe progress tracking callbacks.
+    - Deterministic per-file timeout enforcement catching and isolating hung tasks without blocking the scanner.
+    - Recursive and shallow directory discovery with glob pattern matching (`*.exe;*.dll`, `*`) and file size threshold filtering (`min_size_bytes`, `max_size_bytes`).
+    - Robust error isolation ensuring corrupted or malformed binaries do not abort batch processing.
+  - Multi-format forensic reporting engine (`BatchReporter` in `reporter.py`):
+    - Structured terminal console table with executive summary, throughput rates (files/sec, MB/s), threat breakdown, and aligned file inventory.
+    - RFC 4180-compliant CSV exporter for SIEM spreadsheet ingestion and automated pipeline processing.
+    - Comprehensive JSON manifest exporter capturing full scan options, summary metrics, and per-file telemetry.
+    - Self-contained, offline HTML dashboard generator featuring a dark-mode cybersecurity theme, responsive summary cards, threat distribution metrics, protector summary pills, strict HTML entity escaping, and client-side instant search/filtering with zero external CDN dependencies.
+  - High-level orchestrator facade (`BatchForensicEngine` in `engine.py`) and `DotNetPackerCore.batch_scan` / `DotNetPackerCore.export_batch_report` integration.
+- **CLI Toolchain Integration**:
+  - Added `--batch [DIR]` argument for batch directory scanning.
+  - Added `--batch-recursive` flag for recursive subdirectory scanning.
+  - Added `--batch-workers <INT>` option for concurrent thread configuration (default: 4).
+  - Added `--batch-out <DIR>` option for automated multi-format report exports (JSON, CSV, HTML dashboard).
+  - Added `--batch-json <PATH>`, `--batch-csv <PATH>`, and `--batch-html <PATH>` destination options.
+  - Added `--batch-pattern <GLOB>` option for file filtering (default: `*`).
+  - Added `--batch-timeout <FLOAT>` option for per-file execution bounds (default: 30.0s).
+  - Added `--batch-min-size <INT>` and `--batch-max-size <INT>` threshold options.
+- **Comprehensive Batch Scanner Test Suite (`tests/test_batch_scanner.py`)**:
+  - 41 unit and integration tests covering model serialization, buffer zeroization, path traversal defenses, shallow vs recursive discovery, glob and size filtering, fast PE pre-filtering, multi-threaded concurrency, per-file timeouts, dynamic worker replenishment, error isolation, console tables, JSON/CSV exports, self-contained HTML dashboard validation, core facade methods, and CLI command execution (expanding total suite to 381 passing tests).
+
 ## [2.8.0] - 2026-10-15
 
 ### Added
