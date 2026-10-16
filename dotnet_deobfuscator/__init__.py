@@ -197,8 +197,26 @@ from .batch import (
     ThreatLevel,
     safe_path,
 )
+from .native_aot import (
+    AOTSymbolParser,
+    AOTVersion,
+    CompilationType,
+    DisassembledMethod,
+    MethodDefEntry,
+    NativeAOTAnalysisResult,
+    NativeAOTAnalyzer,
+    NativeAOTTelemetry,
+    NativeDisassembler,
+    NativeSymbol,
+    R2RHeader,
+    R2RInstruction,
+    R2RParser,
+    R2RSection,
+    R2RSectionType,
+    RuntimeFunctionEntry,
+)
 
-__version__ = "2.9.0"
+__version__ = "2.10.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -365,6 +383,22 @@ __all__ = [
     "SingleScanResult",
     "ThreatLevel",
     "safe_path",
+    "AOTSymbolParser",
+    "AOTVersion",
+    "CompilationType",
+    "DisassembledMethod",
+    "MethodDefEntry",
+    "NativeAOTAnalysisResult",
+    "NativeAOTAnalyzer",
+    "NativeAOTTelemetry",
+    "NativeDisassembler",
+    "NativeSymbol",
+    "R2RHeader",
+    "R2RInstruction",
+    "R2RParser",
+    "R2RSection",
+    "R2RSectionType",
+    "RuntimeFunctionEntry",
     "__version__",
 ]
 

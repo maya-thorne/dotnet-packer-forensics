@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.10.0] - 2026-10-16
+
+### Added
+- **Native AOT & ReadyToRun (R2R) Composite PE Forensic Disassembler & Symbol Parser (`dotnet_deobfuscator.native_aot`)**:
+  - Full ReadyToRun (R2R) header and section parser (`R2RParser` in `r2r_parser.py`):
+    - Parses `READYTORUN_HEADER` (`RTR\0` magic: `0x00525452`), major/minor version, and flags from `IMAGE_COR20_HEADER.ManagedNativeHeader` or via section fallback scan.
+    - Decodes all standard ReadyToRun section descriptors: `COMPILER_IDENTIFIER` (100), `IMPORT_SECTIONS` (101), `RUNTIME_FUNCTIONS` (102), `METHODDEF_ENTRYPOINTS` (103), `EXCEPTION_INFO` (104), `DEBUG_INFO` (105), `DELAYLOAD_METHODCALL_THUNKS` (106), `AVAILABLE_TYPES` (107), `INSTANCE_METHOD_ENTRYPOINTS` (108), `INLINING_INFO` (109), `PROFILE_DATA` (110), `MANIFEST_METADATA` (111), `ATTRIBUTE_PRESENCE` (112), and `INLINING_INFO2` (113).
+    - Extracts compiler identifier string (e.g. Crossgen2 / CoreCLR version and release metadata).
+    - Parses Windows x64/ARM64 SEH `RUNTIME_FUNCTION` records (`BeginAddress`, `EndAddress`, `UnwindDataAddress`) to establish native method boundaries and sizes.
+    - Resolves `METHODDEF_ENTRYPOINTS` lookup tables, cross-referencing ECMA-335 MethodDef tokens (`0x0600XXXX`) to precompiled native function entry RVAs.
+  - Native AOT (.NET 7/8/9) detection and symbol demangling engine (`AOTSymbolParser` in `aot_symbol_parser.py`):
+    - Scans and fingerprints characteristic Redhawk (Rhp*) runtime helper functions (`RhpReversePInvoke`, `RhpPInvoke`, `RhpNewFast`, `RhpNewArray`, `RhpAllocate`, `RhpAssignRef`, `RhpTypeCast`, `RhpCheckCast`, `RhpThrowEx`, `RhpInitialDynamicInterfaceDispatch`, `RhGetRuntimeVersion`).
+    - Infers target .NET generation (.NET 7, .NET 8, .NET 9) based on compiler identifiers, Redhawk helper variants, frozen segment signatures, and section topology.
+    - Demangles C-style mangled symbol tokens (e.g. `System_Private_CoreLib_System_Console_WriteLine` -> `System.Console.WriteLine`, constructor `.ctor` tokens) into clean .NET namespaces and method signatures.
+    - Parses PE export directory to recover `UnmanagedCallersOnly` exports and native entrypoint thunks.
+  - Standalone native machine code instruction disassembler (`NativeDisassembler` in `disassembler.py`):
+    - Pure Python x64/x86 instruction decoder handling stack frame management (`PUSH RBP`, `MOV RBP, RSP`, `SUB RSP, imm`), ALU and register operations, direct and indirect calls (`CALL rel32`, `CALL [RIP + disp32]`), unconditional and conditional branches (`JE`, `JNE`, `JL`, `JG`, `JA`, `JB`, `JMP`), and epilogues (`ADD RSP, imm`, `POP RBP`, `RET`).
+    - Automatically annotates call targets with identified Rhp* runtime helper names and resolved symbols.
+    - Partitions basic block topology using branch targets and fallthrough leader instructions.
+  - High-level forensic orchestrator facade (`NativeAOTAnalyzer` in `analyzer.py`) and safe artifact exporter:
+    - Automatically classifies compilation type (`READYTORUN_R2R`, `NATIVE_AOT`, `HYBRID_AOT_MANAGED`, `STANDARD_MANAGED`, `STANDARD_NATIVE`, `CORRUPTED_OR_ANOMALOUS`).
+    - Telemetry metrics: R2R sections count, runtime functions count, mapped entrypoint count, recovered symbols count, Rhp helper list, risk scoring, and structural anomalies.
+    - Safe artifact export (`summary.json`, `r2r_sections.json`, `symbols.csv`, `disassembly.txt`, `disassembly.json`) with path traversal sanitization (`safe_path`) and memory zeroization (`zeroize_buffer`).
+  - Core orchestrator integration (`DotNetPackerCore.analyze_native_aot`, `DotNetPackerCore.export_native_aot`, and `DotNetPackerCore.analyze_bytes`).
+- **CLI Toolchain Integration**:
+  - Added `--native-aot` flag to trigger deep Native AOT and ReadyToRun forensic inspection and detailed telemetry.
+  - Added `--r2r-disasm` flag to disassemble native code methods from runtime functions or AOT stubs.
+  - Added `--aot-symbols` flag to extract and display recovered native symbols, exports, and runtime helpers.
+  - Added `--native-aot-out <DIR>` option for exporting parsed symbols (CSV), R2R sections, and disassembled methods (TXT/JSON).
+  - Added `--native-aot-max-methods <INT>` option configuring maximum disassembly count (default: 50).
+- **Comprehensive Unit & Integration Test Suite (`tests/test_native_aot.py`)**:
+  - 20 unit and integration tests covering data models, enum values, dataclass serialization, security path traversal defenses, buffer zeroization, synthetic ReadyToRun PE binary generation and parsing, fallback section scans, corrupted header resilience, Redhawk helper scanning, version inference (.NET 7/8/9), symbol demangling, x64 method disassembly, call target annotation, basic block construction, indirect calls, analyzer facade inspection across all compilation types, artifact directory export, core orchestrator facade integration, report formatting, and CLI execution (expanding total suite to 401 passing tests).
+
 ## [2.9.0] - 2026-10-16
 
 ### Added

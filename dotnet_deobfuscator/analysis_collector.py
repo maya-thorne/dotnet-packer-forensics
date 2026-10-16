@@ -41,6 +41,7 @@ def build_analysis_report(
     mixed_mode_telemetry: Optional[Dict[str, Any]] = None,
     cfg_telemetry: Optional[Dict[str, Any]] = None,
     baml_telemetry: Optional[Dict[str, Any]] = None,
+    native_aot_telemetry: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Assembles all subsystem forensic findings into a unified analysis report dictionary."""
     return {
@@ -270,5 +271,24 @@ def build_analysis_report(
             "total_anomalies": 0,
             "execution_time_ms": 0.0,
             "anomaly_types": {},
+        },
+        "native_aot": native_aot_telemetry or {
+            "compilation_type": "standard_managed",
+            "is_readytorun": False,
+            "is_native_aot": False,
+            "confidence": "NONE",
+            "target_arch": "unknown",
+            "r2r_version": None,
+            "inferred_dotnet_version": "Unknown Native AOT",
+            "compiler_identifier": None,
+            "r2r_sections_count": 0,
+            "runtime_functions_count": 0,
+            "method_entrypoints_count": 0,
+            "symbols_recovered_count": 0,
+            "rhp_helpers_detected": [],
+            "managed_code_sections": [],
+            "anomalies": [],
+            "risk_score": 0,
+            "risk_severity": "clean",
         },
     }

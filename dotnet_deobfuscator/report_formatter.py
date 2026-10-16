@@ -342,6 +342,32 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
             for anom_k, anom_cnt in list(baml.get("anomaly_types", {}).items())[:4]:
                 lines.append(f"      * {anom_k}: {anom_cnt} occurrence(s)")
 
+    aot = report.get("native_aot", {})
+    if aot.get("is_readytorun") or aot.get("is_native_aot"):
+        lines.append("")
+        lines.append("--- [Native AOT & ReadyToRun (R2R) PE Forensics] ---")
+        lines.append(
+            f"  [+] Compilation Type   : {aot.get('compilation_type', 'N/A')} ({aot.get('inferred_dotnet_version', 'N/A')}) - Confidence: {aot.get('confidence', 'HIGH')}"
+        )
+        lines.append(f"      Target Architecture: {aot.get('target_arch', 'unknown').upper()}")
+        if aot.get("compiler_identifier"):
+            lines.append(f"      Compiler ID        : {aot['compiler_identifier']}")
+        if aot.get("r2r_sections_count", 0) > 0:
+            lines.append(f"      R2R Sections       : {aot['r2r_sections_count']} sections identified")
+        if aot.get("runtime_functions_count", 0) > 0:
+            lines.append(
+                f"      Native Methods     : {aot['runtime_functions_count']} runtime functions ({aot.get('method_entrypoints_count', 0)} mapped MethodDef entrypoints)"
+            )
+        if aot.get("symbols_recovered_count", 0) > 0:
+            lines.append(f"      Symbols Recovered  : {aot['symbols_recovered_count']} symbols")
+        if aot.get("rhp_helpers_detected"):
+            lines.append(f"      Redhawk Helpers    : {', '.join(aot['rhp_helpers_detected'][:5])}")
+            if len(aot["rhp_helpers_detected"]) > 5:
+                lines.append(f"                           ... and {len(aot['rhp_helpers_detected']) - 5} more")
+        if aot.get("anomalies"):
+            for anom in aot["anomalies"][:3]:
+                lines.append(f"  [!] Anomaly: {anom}")
+
     if verbose and report.get("sections"):
         lines.append("")
         lines.append("--- [Section Topology & Entropy] ---")
