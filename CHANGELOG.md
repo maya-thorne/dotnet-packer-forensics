@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.11.0] - 2026-10-17
+
+### Added
+- **Kernel Memory Dump Carving & Residual CIL Metadata Reconstructor (`dotnet_deobfuscator.dump_carver`)**:
+  - Full Windows Minidump (MDMP) and raw memory stream parser (`MinidumpParser` in `minidump_parser.py`):
+    - Parses `MINIDUMP_HEADER`, stream directory entries, and system info architectures (x86, x64, ARM, ARM64).
+    - Decodes standard 32-bit `MemoryListStream` (stream 5) and 64-bit `Memory64ListStream` (stream 9) descriptors, establishing contiguous virtual address mappings.
+    - Decodes `ModuleListStream` (stream 4) extracting loaded binary names (via UTF-16LE decoding), image base addresses, checksums, and timestamps.
+    - Gracefully handles truncated stream descriptors and supports fallback linear partitioning for raw crash dump memory blocks.
+  - ECMA-335 BSJB metadata root scanner and stream carver (`BSJBCarver` in `bsjb_carver.py`):
+    - Scans arbitrary memory segments for the `BSJB` signature (`0x424A5342`) and extracts version strings (e.g. `v4.0.30319`).
+    - Recovers stream directory descriptors (`#~`, `#-`, `#Strings`, `#US`, `#Blob`, `#GUID`).
+    - Decodes the `#US` (User Strings) heap via 7-bit compressed integer lengths and UTF-16LE character decoding to uncover decrypted string constants, URLs, and commands.
+    - Extracts null-terminated UTF-8 identifier tokens from `#Strings`.
+    - Parses `#~` and `#-` metadata table stream headers, recovering valid table bitmasks, sorted bitmasks, and row counts across Module, TypeDef, MethodDef, and Assembly tables.
+  - Residual CIL method body carver and instruction validator (`MethodCarver` in `method_carver.py`):
+    - Heuristically carves Tiny method headers (1-byte, code size 1-63 bytes) and Fat method headers (12-byte header, MaxStack, CodeSize, LocalVarSigTok).
+    - Validates instruction streams against known 1-byte and 2-byte ECMA-335 CIL opcodes, checking immediate operand boundaries and verifying method termination (`ret`, `throw`, unconditional branches).
+    - Filters out random memory noise and non-code blocks using instruction density thresholds and Shannon entropy checks.
+  - PE container synthesization and layout unmapper (`AssemblyReconstructor` in `reconstructor.py`):
+    - Locates surrounding `MZ` headers to unmap virtual memory allocations back to physical file alignments.
+    - Synthesizes a minimal compliant PE32/CLR container when original PE headers are missing or wiped by anti-forensic hooks, binding carved BSJB metadata, tables, and residual methods into a valid PE image with CLR COM descriptors.
+  - High-level orchestrator facade (`KernelDumpCarver` in `analyzer.py`) and safe artifact exporter:
+    - Provides comprehensive telemetry: dump format, dump size, memory ranges scanned, modules detected, BSJB roots found, assemblies carved, methods recovered, strings recovered, and anomaly flags (`CORRUPTED_PE_HEADER`, `TRUNCATED_BSJB_STREAM`, `ORPHANED_METHOD_BODIES`, `SUSPICIOUS_MEMORY_GAP`).
+    - Safe artifact export (`summary.json`, `carved_assemblies/`, `residual_methods.json`, `extracted_strings.txt`) with strict path traversal defenses (`safe_path`) and memory wiping (`zeroize_buffer`).
+  - Core orchestrator integration (`DotNetPackerCore.carve_dump` and `DotNetPackerCore.export_carved_dump`).
+- **CLI Toolchain Integration**:
+  - Added `--dump-carver` flag enabling memory dump inspection and residual CIL carving.
+  - Added `--dump-extract-methods` flag to carve Tiny and Fat method bodies from memory pages.
+  - Added `--dump-out <DIR>` option for exporting carved assemblies, residual method JSON, strings, and metadata tables.
+  - Added `--dump-min-confidence <FLOAT>` option setting the minimum confidence threshold for reconstructed assemblies (default: 0.5).
+  - Added `--dump-max-methods <INT>` option configuring maximum residual CIL methods to carve (default: 100).
+- **Comprehensive Unit & Integration Test Suite (`tests/test_dump_carver.py`)**:
+  - 16 dedicated unit and integration tests covering data models, enum serialization, path traversal security, buffer zeroization, synthetic minidump parsing (32-bit and 64-bit memory list streams, module list streams), BSJB root scanning, `#US` and `#Strings` extraction, `#~` table row count decoding, Tiny and Fat CIL method carving, PE synthesization, memory unmapping, analyzer facade execution, directory export, and CLI automation (expanding total suite to 417 passing tests).
+
 ## [2.10.0] - 2026-10-16
 
 ### Added

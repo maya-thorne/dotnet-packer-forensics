@@ -24,6 +24,7 @@ from .mixed_mode import MixedModeAnalyzer, MixedModeAnalysisResult
 from .cfg import CFGAnalyzer, CFGAnalysisResult, MethodCFG
 from .baml import BamlDecompiler, BamlExtractionResult
 from .native_aot import NativeAOTAnalysisResult, NativeAOTAnalyzer
+from .dump_carver import DumpCarverResult, KernelDumpCarver
 from .unpacker_dispatcher import unpack_payload_to_file, unpack_all_to_dir
 from .unpackers.armdot import ArmDotOpcodeTable, ArmDotUnpacker, ArmDotVMDisassembler
 from .unpackers.babel import BabelUnpacker
@@ -133,6 +134,10 @@ class DotNetPackerCore:
         native_aot_res = NativeAOTAnalyzer.analyze(data, file_name=file_name)
         native_aot_telemetry = native_aot_res.telemetry.to_dict()
 
+        # 22. Kernel Memory Dump Carving & Residual CIL Forensics
+        dump_carver_res = KernelDumpCarver.analyze(data, file_name=file_name)
+        dump_carver_telemetry = dump_carver_res.telemetry.to_dict()
+
         return build_analysis_report(
             file_path=file_name, file_size=file_size, elapsed_ms=elapsed_ms,
             hashes=hashes, assembly_info=assembly_info, detected_protectors=detected_protectors,
@@ -150,15 +155,13 @@ class DotNetPackerCore:
             threat_rules_telemetry=threat_rules_telemetry, mixed_mode_telemetry=mixed_mode_telemetry,
             cfg_telemetry=cfg_telemetry, baml_telemetry=baml_telemetry,
             native_aot_telemetry=native_aot_telemetry,
+            dump_carver_telemetry=dump_carver_telemetry,
         )
 
 
     @classmethod
     def rebuild_pe(
-        cls,
-        input_path: str,
-        output_path: str,
-        options: Optional[PERebuildOptions] = None,
+        cls, input_path: str, output_path: str, options: Optional[PERebuildOptions] = None
     ) -> PERebuildReport:
         """Rebuilds and repairs damaged PE headers and sections, saving output to file."""
         with open(input_path, "rb") as f:
@@ -170,9 +173,7 @@ class DotNetPackerCore:
 
     @classmethod
     def rebuild_pe_buffer(
-        cls,
-        data: bytes,
-        options: Optional[PERebuildOptions] = None,
+        cls, data: bytes, options: Optional[PERebuildOptions] = None
     ) -> Tuple[bytes, PERebuildReport]:
         """Rebuilds and repairs damaged PE headers and sections from byte buffer."""
         return PERebuilder.rebuild(data, options=options)
@@ -397,31 +398,22 @@ class DotNetPackerCore:
         }
 
     @classmethod
-    def bypass_intellilock_hwlock(
-        cls, hardware_id: str = "*"
-    ) -> VirtualLicense:
+    def bypass_intellilock_hwlock(cls, hardware_id: str = "*") -> VirtualLicense:
         """Synthesizes matching VirtualLicense to bypass hardware locking."""
         return VirtualLicense.generate_unlimited_license(hardware_id=hardware_id)
 
     @classmethod
     def unpack_intellilock_dir(
-        cls,
-        input_path: str,
-        output_dir: str,
-        master_seed: int = 0x14725836,
+        cls, input_path: str, output_dir: str, master_seed: int = 0x14725836
     ) -> Dict[str, Any]:
         """Unpacks neutralized binary, synthetic license, and manifest to directory."""
         with open(input_path, "rb") as f:
             data = f.read()
-        return IntelliLockUnpacker.unpack_to_directory(
-            data, output_dir=output_dir, master_seed=master_seed
-        )
+        return IntelliLockUnpacker.unpack_to_directory(data, output_dir=output_dir, master_seed=master_seed)
 
     @classmethod
     def deflatten_deepsea(
-        cls,
-        input_path: str,
-        output_path: Optional[str] = None,
+        cls, input_path: str, output_path: Optional[str] = None
     ) -> Tuple[bytes, Dict[str, Any]]:
         """De-flattens DeepSea obfuscated assembly and writes output PE if specified."""
         with open(input_path, "rb") as f:
@@ -433,9 +425,7 @@ class DotNetPackerCore:
         return rebuilt_pe, rep
 
     @classmethod
-    def deflatten_deepsea_method(
-        cls, bytecode: bytes, method_name: str = "Method"
-    ) -> Dict[str, Any]:
+    def deflatten_deepsea_method(cls, bytecode: bytes, method_name: str = "Method") -> Dict[str, Any]:
         """De-flattens a single CIL method bytecode stream and reconstructs AST."""
         return DeepSeaUnpacker.deflatten_method(bytecode, method_name=method_name)
 
@@ -447,11 +437,8 @@ class DotNetPackerCore:
 
     @classmethod
     def restore_antitamper(
-        cls,
-        input_path: str,
-        output_path: Optional[str] = None,
-        jit_dump_path: Optional[str] = None,
-        master_seed: int = 0x5A5A5A5A,
+        cls, input_path: str, output_path: Optional[str] = None,
+        jit_dump_path: Optional[str] = None, master_seed: int = 0x5A5A5A5A,
     ) -> Tuple[bytes, Dict[str, Any]]:
         """Restores anti-tampered assembly, repairing CIL method bodies."""
         with open(input_path, "rb") as f:
@@ -471,11 +458,8 @@ class DotNetPackerCore:
 
     @classmethod
     def unpack_antitamper_dir(
-        cls,
-        input_path: str,
-        output_dir: str,
-        jit_dump_path: Optional[str] = None,
-        master_seed: int = 0x5A5A5A5A,
+        cls, input_path: str, output_dir: str,
+        jit_dump_path: Optional[str] = None, master_seed: int = 0x5A5A5A5A,
     ) -> Dict[str, Any]:
         """Unpacks anti-tampered binary, dumped methods, and CIL files to directory."""
         with open(input_path, "rb") as f:
@@ -485,9 +469,7 @@ class DotNetPackerCore:
 
     @classmethod
     def heal_anti_dump(
-        cls,
-        input_path: str,
-        output_path: Optional[str] = None,
+        cls, input_path: str, output_path: Optional[str] = None,
         options: Optional[AntiDumpHealOptions] = None,
     ) -> Tuple[bytes, Dict[str, Any]]:
         """Heals anti-dump memory corruptions, reconstructing PE headers and CLR metadata."""
@@ -507,9 +489,7 @@ class DotNetPackerCore:
 
     @classmethod
     def unpack_anti_dump_dir(
-        cls,
-        input_path: str,
-        output_dir: str,
+        cls, input_path: str, output_dir: str,
         options: Optional[AntiDumpHealOptions] = None,
     ) -> Dict[str, Any]:
         """Heals dump and exports normalized binary, carved sections, and telemetry to directory."""
@@ -691,5 +671,22 @@ class DotNetPackerCore:
         return NativeAOTAnalyzer.export_to_directory(
             res, output_dir=output_dir, max_exported_methods=max_exported_methods
         )
+
+    @classmethod
+    def carve_dump(
+        cls, input_path: str, min_confidence: float = 0.5, max_methods: int = 100
+    ) -> DumpCarverResult:
+        """Performs kernel memory dump carving and residual CIL metadata recovery."""
+        return KernelDumpCarver.analyze_file(
+            input_path, min_confidence=min_confidence, max_methods=max_methods
+        )
+
+    @classmethod
+    def export_carved_dump(
+        cls, input_path: str, output_dir: str, min_confidence: float = 0.5, max_methods: int = 100
+    ) -> Dict[str, Any]:
+        """Carves memory dump and exports assemblies, residual methods, and strings to directory."""
+        res = cls.carve_dump(input_path, min_confidence=min_confidence, max_methods=max_methods)
+        return KernelDumpCarver.export_to_directory(res, output_dir=output_dir)
 
 

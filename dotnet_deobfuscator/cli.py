@@ -599,6 +599,40 @@ def main(argv: Optional[list] = None) -> int:
         except Exception as e:
             sys.stderr.write(f"[-] Native AOT / R2R analysis failed: {e}\n")
 
+    # Kernel Memory Dump Carving & Residual CIL Forensics
+    if args.dump_carver or args.dump_extract_methods or args.dump_out:
+        try:
+            dump_res = DotNetPackerCore.carve_dump(
+                args.target,
+                min_confidence=args.dump_min_confidence,
+                max_methods=args.dump_max_methods,
+            )
+            sys.stdout.write(
+                f"[+] Memory Dump Carving: {dump_res.telemetry.dump_format.upper()} ({dump_res.telemetry.dump_size:,} bytes)\n"
+                f"    Ranges: {dump_res.telemetry.memory_ranges_scanned} scanned, BSJB Roots: {dump_res.telemetry.bsjb_roots_found}, "
+                f"Assemblies: {dump_res.telemetry.assemblies_carved}, Methods: {dump_res.telemetry.methods_recovered}\n"
+            )
+            if dump_res.carved_assemblies:
+                sys.stdout.write(f"\n--- [Carved Assemblies: {len(dump_res.carved_assemblies)}] ---\n")
+                for asm in dump_res.carved_assemblies:
+                    sys.stdout.write(f"  * {asm.identifier}: {asm.name} (v{asm.version}) - Conf: {asm.confidence*100:.0f}%, SHA256: {asm.sha256[:16]}...\n")
+            if args.dump_extract_methods and dump_res.residual_methods:
+                sys.stdout.write(f"\n--- [Recovered Residual Methods: {len(dump_res.residual_methods)}] ---\n")
+                for m in dump_res.residual_methods[:10]:
+                    sys.stdout.write(f"  [0x{m.token:08X} @ {hex(m.offset)}] {m.format.upper()} ({m.code_size}b) - Entropy: {m.entropy:.2f}\n")
+            if args.dump_out:
+                exp_dump = DotNetPackerCore.export_carved_dump(
+                    args.target,
+                    output_dir=args.dump_out,
+                    min_confidence=args.dump_min_confidence,
+                    max_methods=args.dump_max_methods,
+                )
+                sys.stdout.write(
+                    f"[+] Exported {len(exp_dump['exported_files'])} carved dump files to -> {args.dump_out}\n"
+                )
+        except Exception as e:
+            sys.stderr.write(f"[-] Memory dump carving failed: {e}\n")
+
     if args.format == "json":
         sys.stdout.write(json.dumps(report, indent=2) + "\n")
     else:
