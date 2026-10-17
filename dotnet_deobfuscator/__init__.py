@@ -215,8 +215,25 @@ from .native_aot import (
     R2RSectionType,
     RuntimeFunctionEntry,
 )
+from .dump_carver import (
+    AssemblyReconstructor,
+    BSJBCarver,
+    CILMethodHeaderFormat,
+    CarverAnomalyFlag,
+    CarvedArtifactType,
+    CarvedAssembly,
+    CarvedMethod,
+    CarvedString,
+    DumpCarverResult,
+    DumpCarverTelemetry,
+    DumpFormat,
+    KernelDumpCarver,
+    MemoryRange,
+    MethodCarver,
+    MinidumpParser,
+)
 
-__version__ = "2.10.0"
+__version__ = "2.11.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -399,6 +416,21 @@ __all__ = [
     "R2RSection",
     "R2RSectionType",
     "RuntimeFunctionEntry",
+    "KernelDumpCarver",
+    "MinidumpParser",
+    "BSJBCarver",
+    "MethodCarver",
+    "AssemblyReconstructor",
+    "DumpFormat",
+    "CarvedArtifactType",
+    "CILMethodHeaderFormat",
+    "CarverAnomalyFlag",
+    "MemoryRange",
+    "CarvedString",
+    "CarvedMethod",
+    "CarvedAssembly",
+    "DumpCarverTelemetry",
+    "DumpCarverResult",
     "__version__",
 ]
 

@@ -183,10 +183,15 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `--aot-symbols` | Extract and display recovered Native AOT symbols, exports, and Redhawk runtime helpers | `False` |
 | `--native-aot-out` | Directory path to export parsed symbols (CSV), R2R sections, and disassembled methods (TXT/JSON) | None |
 | `--native-aot-max-methods` | Maximum number of methods to disassemble in Native AOT / R2R analysis | `50` |
+| `--dump-carver` | Enable kernel crash dump, minidump (MDMP), and process memory carving for residual .NET metadata | `False` |
+| `--dump-extract-methods` | Carve residual CIL method bodies (Tiny & Fat format) directly from memory pages | `False` |
+| `--dump-out` | Directory path to export carved assemblies, residual method JSON, strings, and metadata tables | None |
+| `--dump-min-confidence` | Minimum confidence threshold [0.0 - 1.0] for assembly reconstruction | `0.5` |
+| `--dump-max-methods` | Maximum residual CIL methods to carve from memory dump | `100` |
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v2.10.0` |
+| `--version` | Display engine version and exit | `v2.11.0` |
 
 
 </details>

@@ -368,6 +368,20 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
             for anom in aot["anomalies"][:3]:
                 lines.append(f"  [!] Anomaly: {anom}")
 
+    dc = report.get("dump_carver", {})
+    if dc.get("bsjb_roots_found", 0) > 0 or dc.get("assemblies_carved", 0) > 0 or (dc.get("dump_format") and dc.get("dump_format") != "standard_pe"):
+        lines.append("")
+        lines.append("--- [Kernel Memory Dump & Residual CIL Forensics] ---")
+        lines.append(f"  [+] Dump Format        : {dc.get('dump_format', 'N/A').upper()} ({dc.get('dump_size', 0):,} bytes)")
+        lines.append(f"      Memory Ranges      : {dc.get('memory_ranges_scanned', 0)} ranges scanned ({dc.get('modules_detected', 0)} loaded modules)")
+        lines.append(f"      BSJB Metadata Roots: {dc.get('bsjb_roots_found', 0)} roots identified")
+        lines.append(f"      Carved Assemblies  : {dc.get('assemblies_carved', 0)} assemblies ({dc.get('methods_recovered', 0)} residual methods)")
+        if dc.get("strings_recovered", 0) > 0:
+            lines.append(f"      Extracted Strings  : {dc.get('strings_recovered', 0)} user & identifier strings")
+        if dc.get("anomaly_flags"):
+            for anom in dc["anomaly_flags"][:3]:
+                lines.append(f"  [!] Dump Anomaly: {anom}")
+
     if verbose and report.get("sections"):
         lines.append("")
         lines.append("--- [Section Topology & Entropy] ---")

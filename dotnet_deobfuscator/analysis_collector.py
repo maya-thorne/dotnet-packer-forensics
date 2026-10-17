@@ -42,6 +42,7 @@ def build_analysis_report(
     cfg_telemetry: Optional[Dict[str, Any]] = None,
     baml_telemetry: Optional[Dict[str, Any]] = None,
     native_aot_telemetry: Optional[Dict[str, Any]] = None,
+    dump_carver_telemetry: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Assembles all subsystem forensic findings into a unified analysis report dictionary."""
     return {
@@ -290,5 +291,16 @@ def build_analysis_report(
             "anomalies": [],
             "risk_score": 0,
             "risk_severity": "clean",
+        },
+        "dump_carver": dump_carver_telemetry or {
+            "dump_format": "standard_pe",
+            "dump_size": 0,
+            "memory_ranges_scanned": 0,
+            "modules_detected": 0,
+            "bsjb_roots_found": 0,
+            "assemblies_carved": 0,
+            "methods_recovered": 0,
+            "strings_recovered": 0,
+            "anomaly_flags": [],
         },
     }

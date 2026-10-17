@@ -390,6 +390,33 @@ def build_parser() -> argparse.ArgumentParser:
         default=50,
         help="Maximum number of methods to disassemble in Native AOT / R2R analysis (default: 50)",
     )
+    # Kernel Memory Dump Carving & Residual CIL Forensics
+    parser.add_argument(
+        "--dump-carver",
+        action="store_true",
+        help="Enable kernel crash dump, minidump (MDMP), and process memory carving for residual .NET metadata",
+    )
+    parser.add_argument(
+        "--dump-extract-methods",
+        action="store_true",
+        help="Carve residual CIL method bodies (Tiny & Fat format) directly from memory pages",
+    )
+    parser.add_argument(
+        "--dump-out",
+        help="Directory path to export carved assemblies, residual method JSON, strings, and metadata tables",
+    )
+    parser.add_argument(
+        "--dump-min-confidence",
+        type=float,
+        default=0.5,
+        help="Minimum confidence threshold [0.0 - 1.0] for assembly reconstruction (default: 0.5)",
+    )
+    parser.add_argument(
+        "--dump-max-methods",
+        type=int,
+        default=100,
+        help="Maximum residual CIL methods to carve from memory dump (default: 100)",
+    )
     parser.add_argument(
         "--format", choices=["text", "json"], default="text", help="Telemetry format (text or json)"
     )
