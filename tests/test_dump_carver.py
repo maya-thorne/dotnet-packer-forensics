@@ -8,6 +8,7 @@ import shutil
 import struct
 import tempfile
 import unittest
+from typing import Tuple
 
 from dotnet_deobfuscator.cli import main
 from dotnet_deobfuscator.core import DotNetPackerCore
