@@ -26,6 +26,7 @@ from .baml import BamlDecompiler, BamlExtractionResult
 from .native_aot import NativeAOTAnalysisResult, NativeAOTAnalyzer
 from .dump_carver import DumpCarverResult, KernelDumpCarver
 from .decompiler_bridge import DecompilerBridgeEngine, DecompilerBridgeOptions, DecompilerBridgeResult, DecompilerEngine
+from .diffing import BinaryDiffEngine, BinaryDiffOptions, BinaryDiffResult
 from .unpacker_dispatcher import unpack_payload_to_file, unpack_all_to_dir
 from .unpackers.armdot import ArmDotOpcodeTable, ArmDotUnpacker, ArmDotVMDisassembler
 from .unpackers.babel import BabelUnpacker
@@ -550,20 +551,22 @@ class DotNetPackerCore:
         )
 
     @classmethod
+    def _read_or_generate_pe(cls, path: Optional[str], is_64bit: bool) -> Optional[bytes]:
+        if path:
+            if not os.path.exists(path):
+                raise FileNotFoundError(f"Binary file not found: {path}")
+            with open(path, "rb") as f:
+                return f.read()
+        return SyntheticMutatedBinaryGenerator.generate_baseline_pe(is_64bit=True) if is_64bit else None
+
+    @classmethod
     def run_fuzzing_campaign(
         cls, target_path: Optional[str] = None, iterations: int = 50, seed: int = 1337,
         targets: Optional[List[str]] = None, timeout_sec: float = 3.0, output_dir: Optional[str] = None,
         is_64bit: bool = False, isolate_process: bool = False,
     ) -> FuzzCampaignResult:
         """Executes automated regression fuzzing campaign across forensic targets."""
-        base_binary = None
-        if target_path:
-            if not os.path.exists(target_path):
-                raise FileNotFoundError(f"Fuzzing target file not found: {target_path}")
-            with open(target_path, "rb") as f:
-                base_binary = f.read()
-        elif is_64bit:
-            base_binary = SyntheticMutatedBinaryGenerator.generate_baseline_pe(is_64bit=True)
+        base_binary = cls._read_or_generate_pe(target_path, is_64bit)
         parsed_targets = [FuzzTarget.from_str(t) for t in targets] if targets else None
         return RegressionFuzzingHarness.run_campaign(
             base_binary=base_binary, iterations=iterations, seed=seed,
@@ -577,14 +580,7 @@ class DotNetPackerCore:
         output_dir: Optional[str] = None, is_64bit: bool = False,
     ) -> List[Dict[str, Any]]:
         """Generates and optionally exports a corpus of synthetic mutated binaries."""
-        base_binary = None
-        if base_path:
-            if not os.path.exists(base_path):
-                raise FileNotFoundError(f"Base binary file not found: {base_path}")
-            with open(base_path, "rb") as f:
-                base_binary = f.read()
-        elif is_64bit:
-            base_binary = SyntheticMutatedBinaryGenerator.generate_baseline_pe(is_64bit=True)
+        base_binary = cls._read_or_generate_pe(base_path, is_64bit)
         corpus = SyntheticMutatedBinaryGenerator.generate_corpus(base_binary=base_binary, count=count, seed=seed)
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
@@ -684,5 +680,16 @@ class DotNetPackerCore:
         res = cls.generate_decompiler_bridge(input_path, engine=engine, base_addr=base_addr, min_confidence=min_confidence)
         return DecompilerBridgeEngine.export_to_directory(res, output_dir=output_dir)
 
+    @classmethod
+    def diff_binaries(
+        cls, path_a: str, path_b: str, options: Optional[BinaryDiffOptions] = None
+    ) -> BinaryDiffResult:
+        """Compares two binaries across metadata, bytecode, CFG, and AST flow layers."""
+        return BinaryDiffEngine.compare_files(path_a, path_b, options=options)
 
-
+    @classmethod
+    def export_diff_report(
+        cls, result: BinaryDiffResult, output_dir: str
+    ) -> Dict[str, Any]:
+        """Exports unified diff summary, method CSV, textual diff, and HTML dashboard."""
+        return BinaryDiffEngine.export_to_directory(result, output_dir=output_dir)

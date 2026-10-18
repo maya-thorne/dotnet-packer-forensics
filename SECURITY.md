@@ -16,7 +16,7 @@ Security updates are applied to the latest release series on the `main` branch.
 2. **Authenticated Encryption**: All containers verify integrity and authenticity using ChaCha20-Poly1305 AEAD or HMAC/CRC-32 layers prior to exposing plaintext.
 3. **Constant-Time Verification**: Authentication tags, MACs, and sensitive token comparisons execute in constant time to mitigate side-channel timing attacks.
 4. **Bounds & Overflow Protection**: Binary container parsers enforce strict length checks and saturating/checked arithmetic on untrusted headers.
-5. **Path Traversal & Export Sandboxing**: Directory unpackers, symbol exporters, and decompiler bridge script generators enforce strict path confinement via `safe_path` to prevent path traversal attacks, and scrub transient memory buffers via `zeroize_buffer`.
+5. **Path Traversal & Export Sandboxing**: Directory unpackers, symbol exporters, binary diffing reporters, and decompiler bridge script generators enforce strict path confinement via `safe_path` to prevent path traversal attacks, and scrub transient memory buffers via `zeroize_buffer`.
 
 ## Reporting a Vulnerability
 

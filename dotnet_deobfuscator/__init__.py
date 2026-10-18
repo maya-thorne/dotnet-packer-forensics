@@ -249,8 +249,30 @@ from .decompiler_bridge import (
     SymbolSynchronizer,
     SymbolType,
 )
+from .diffing import (
+    ASTDiffer,
+    ASTFlowDiff,
+    BinaryDiffEngine,
+    BinaryDiffOptions,
+    BinaryDiffResult,
+    BinaryDiffTelemetry,
+    BytecodeDiff,
+    BytecodeDiffer,
+    CFGDiffer,
+    CFGGraphDiff,
+    ChangeType,
+    DiffCategory,
+    DiffEngine,
+    HTMLDiffReporter,
+    MetadataDiff,
+    MetadataDiffer,
+    MethodDiff,
+    ObfuscationImpact,
+    SectionDiff,
+    calculate_entropy,
+)
 
-__version__ = "2.12.0"
+__version__ = "2.13.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -463,6 +485,25 @@ __all__ = [
     "Radare2BridgeGenerator",
     "SymbolSynchronizer",
     "DecompilerBridgeEngine",
+    "ASTDiffer",
+    "ASTFlowDiff",
+    "BinaryDiffEngine",
+    "BinaryDiffOptions",
+    "BinaryDiffResult",
+    "BinaryDiffTelemetry",
+    "BytecodeDiff",
+    "BytecodeDiffer",
+    "CFGDiffer",
+    "CFGGraphDiff",
+    "ChangeType",
+    "DiffCategory",
+    "DiffEngine",
+    "HTMLDiffReporter",
+    "MetadataDiff",
+    "MetadataDiffer",
+    "MethodDiff",
+    "ObfuscationImpact",
+    "SectionDiff",
     "__version__",
 ]
 
