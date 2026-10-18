@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.12.0] - 2026-10-18
+
+### Added
+- **Ghidra & IDA Pro Python Automated Headless Bridge & Symbol Synchronizer (`dotnet_deobfuscator.decompiler_bridge`)**:
+  - Modular decompiler bridge architecture across Ghidra, IDA Pro, and Radare2/Cutter:
+    - Data models and enums (`models.py`): `DecompilerEngine` (GHIDRA, IDA_PRO, RADARE2, ALL), `SymbolType` (FUNCTION, ENTRY_POINT, RUNTIME_HELPER, VM_DISPATCHER, DECRYPTOR, NATIVE_TRANSITION, METADATA_TOKEN, ANOMALY_BLOCK), `CommentType` (PLATE, EOL, REPEATABLE, ANTERIOR, POSTERIOR), `DecompilerSymbol`, `DecompilerComment`, `DecompilerBookmark`, `DecompilerTypeStruct`, `DecompilerBridgeOptions`, `DecompilerBridgeTelemetry`, and `DecompilerBridgeResult`.
+    - Hardened security primitives: `safe_path` (strict directory traversal defenses), `zeroize_buffer` (in-place memory wiping), and `calculate_entropy`.
+  - Headless Ghidra script generator (`GhidraBridgeGenerator` in `ghidra_bridge.py`):
+    - Synthesizes valid Python 3/Jython post-analysis scripts targeting the Ghidra FlatProgramAPI (`createLabel`, `createFunction`, `setPlateComment`, `setEOLComment`, `setRepeatableComment`, `createBookmark`).
+    - Dynamic imagebase offset resolution (`currentProgram.getImageBase().getOffset()`) and identifier sanitization preventing `InvalidInputException` errors.
+    - Generates one-click batch runner scripts (`run_ghidra.bat` and `run_ghidra.sh`) for headless batch analysis (`analyzeHeadless`).
+  - IDAPython script generator (`IDABridgeGenerator` in `ida_bridge.py`):
+    - Synthesizes valid IDAPython scripts compatible with IDA Pro 7.x, 8.x, and 9.x Python 3 runtimes.
+    - Automated auto-analysis synchronization (`ida_auto.auto_wait()`), dynamic rebasing (`ida_nalt.get_imagebase()`), safe naming (`ida_name.set_name` with `SN_NOWARN | SN_NOCHECK`), function creation (`ida_funcs.add_func`), regular/repeatable comments (`ida_bytes.set_cmt`), anterior plate comments (`idc.update_extra_cmt`), and navigation bookmarks (`idc.put_bookmark`).
+    - Generates batch runner scripts (`run_ida.bat` and `run_ida.sh`) for automated headless execution via `idat.exe` / `idat64.exe` / `idat64`.
+  - Radare2 / Cutter script generator (`Radare2BridgeGenerator` in `radare2_bridge.py`):
+    - Emits r2 command scripts (`.r2`) defining flags (`f`), function boundaries (`af+`), comments (`CC`), and bookmarks.
+    - Generates cross-platform batch runner scripts (`run_r2.bat` and `run_r2.sh`).
+  - Multi-subsystem forensic symbol synchronizer (`SymbolSynchronizer` in `symbol_sync.py`):
+    - Correlates and harmonizes forensic findings from all 10 analysis pipelines:
+      * PE headers: image entrypoint, section boundaries, and topology.
+      * Cor20Header: CLI runtime descriptor and managed execution entrypoint.
+      * .NET Reactor: decrypted NecroBit method bodies and native stub envelopes.
+      * Eazfuscator.NET & ArmDot: virtual machine method containers and dispatchers.
+      * Babel Obfuscator: demangled symbols and merged satellite assemblies.
+      * Mixed-Mode C++/CLI: IMAGE_COR_VTABLEFIXUP slots, TLS callbacks, and unmanaged exports.
+      * Native AOT & ReadyToRun: Redhawk (Rhp*) runtime helpers and native function entrypoints.
+      * Kernel Memory Dump Carver: residual CIL method bodies and BSJB metadata tables.
+      * CIL Control Flow Graph (CFG): high-entropy anomaly blocks and encrypted basic blocks.
+    - Intelligent collision resolution prioritizing entrypoints, runtime helpers, VM dispatchers, and decrypted functions over raw metadata tokens.
+    - Multi-line comment aggregation and confidence-based filtering (`min_confidence`).
+  - High-level orchestrator facade (`DecompilerBridgeEngine` in `analyzer.py`) and safe directory exporter:
+    - Analyzes binaries and exports ready-to-run decompiler scripts, batch runners, `symbols.json`, `symbols.csv`, `comments.json`, `bookmarks.json`, and `telemetry.json`.
+    - Integrated with `DotNetPackerCore.generate_decompiler_bridge()` and `DotNetPackerCore.export_decompiler_bridge()`.
+- **CLI Toolchain Integration**:
+  - Added `--decompiler-bridge` flag enabling headless bridge generation and symbol synchronization.
+  - Added `--bridge-engine {ghidra,ida_pro,radare2,all}` option (default: `all`).
+  - Added `--bridge-base-addr <ADDR>` option for custom image base rebasing (default: `0x400000`).
+  - Added `--bridge-out <DIR>` option for exporting scripts, runners, and symbol catalogs to directory.
+  - Added `--bridge-min-confidence <FLOAT>` option setting the minimum confidence threshold for symbol inclusion (default: `0.5`).
+- **Comprehensive Unit & Integration Test Suite (`tests/test_decompiler_bridge.py`)**:
+  - 21 dedicated unit and integration tests covering data models, enum serialization, path traversal security, buffer zeroization, Ghidra and IDA Python script compilation validity via `compile(script, "<test>", "exec")`, symbol correlation across all packers and Native AOT, collision deduplication, directory export, and CLI arguments (expanding total suite to 438 passing tests).
+
 ## [2.11.0] - 2026-10-17
 
 ### Added

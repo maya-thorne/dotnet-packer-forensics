@@ -188,10 +188,15 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `--dump-out` | Directory path to export carved assemblies, residual method JSON, strings, and metadata tables | None |
 | `--dump-min-confidence` | Minimum confidence threshold [0.0 - 1.0] for assembly reconstruction | `0.5` |
 | `--dump-max-methods` | Maximum residual CIL methods to carve from memory dump | `100` |
+| `--decompiler-bridge` | Generate headless decompiler bridge scripts and synchronize symbols | `False` |
+| `--bridge-engine` | Target disassembler engine (`ghidra`, `ida_pro`, `radare2`, `all`) | `all` |
+| `--bridge-base-addr` | Base address for RVA rebasing (e.g. `0x400000` or `0x140000000`) | `0x400000` |
+| `--bridge-out` | Directory path to export generated scripts, runner batch files, and symbols | None |
+| `--bridge-min-confidence` | Minimum symbol confidence threshold [0.0 - 1.0] | `0.5` |
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v2.11.0` |
+| `--version` | Display engine version and exit | `v2.12.0` |
 
 
 </details>
@@ -541,6 +546,66 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><b>Native AOT Forensic Analyzer Facade</b></td>
       <td>Orchestrates PE inspection, R2R/AOT classification, method disassembly, risk scoring, and safe directory exports.</td>
     </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/dump_carver/models.py</code></td>
+      <td><b>Dump Carver Models &amp; Structures</b></td>
+      <td>Encapsulates DumpSourceType, CarveStrategy, MemorySegment, CarvedCILMethod, and AssemblyReconstructionResult.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/dump_carver/minidump_parser.py</code></td>
+      <td><b>Minidump &amp; Memory Stream Parser</b></td>
+      <td>Parses MDMP directory streams, Memory64List streams, memory page permissions, and zeroes scratchpad buffers.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/dump_carver/method_carver.py</code></td>
+      <td><b>CIL Method Memory Carver</b></td>
+      <td>Scans process memory pages for ECMA-335 CorILMethod Tiny &amp; Fat method headers and extracts bytecode bodies.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/dump_carver/bsjb_carver.py</code></td>
+      <td><b>BSJB CLI Metadata Stream Carver</b></td>
+      <td>Locates BSJB magic signatures in unmapped memory, parses stream headers, and extracts metadata heaps.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/dump_carver/reconstructor.py</code></td>
+      <td><b>PE Assembly Reconstructor</b></td>
+      <td>Reconstructs valid PE files from carved memory streams, realigns sections, synthesizes Cor20 headers, and repairs tables.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/dump_carver/analyzer.py</code></td>
+      <td><b>Dump Carver Forensic Facade</b></td>
+      <td>Orchestrates dump parsing, method carving, assembly reconstruction, risk scoring, and safe directory exports.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/decompiler_bridge/models.py</code></td>
+      <td><b>Decompiler Bridge Models &amp; Enums</b></td>
+      <td>Encapsulates DecompilerEngine, SymbolType, CommentType, DecompilerSymbol, DecompilerComment, and telemetry results.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/decompiler_bridge/ghidra_bridge.py</code></td>
+      <td><b>Ghidra Headless Bridge Generator</b></td>
+      <td>Synthesizes Python 3/Jython FlatProgramAPI scripts for labels, functions, plate/EOL comments, bookmarks, and headless runners.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/decompiler_bridge/ida_bridge.py</code></td>
+      <td><b>IDA Pro Headless Bridge Generator</b></td>
+      <td>Synthesizes IDAPython 7.x–9.x scripts with dynamic rebasing, ida_name, ida_funcs, ida_bytes, idc bookmarks, and batch runners.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/decompiler_bridge/radare2_bridge.py</code></td>
+      <td><b>Radare2 Headless Bridge Generator</b></td>
+      <td>Synthesizes radare2 r2 scripts (flags, functions, comments) and cross-platform headless execution scripts.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/decompiler_bridge/symbol_sync.py</code></td>
+      <td><b>Multi-Engine Symbol Synchronizer</b></td>
+      <td>Correlates PE headers, NecroBit methods, VM containers, Babel demangled symbols, mixed-mode VTFixups, Native AOT helpers, and memory carved methods.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/decompiler_bridge/analyzer.py</code></td>
+      <td><b>Decompiler Bridge Engine Facade</b></td>
+      <td>Orchestrates multi-engine script generation, symbol synchronization, telemetry aggregation, and safe directory exports.</td>
+    </tr>
   </tbody>
 </table>
 
@@ -680,6 +745,16 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>tests/test_fuzzing_harness.py</code></td>
       <td><b>Regression Fuzzing Harness &amp; Mutator Test</b></td>
       <td>Validates baseline PE generation, 11 mutation operators, sandboxed target triage, crash bundling, timeout detection, ledger persistence, path traversal defense, and CLI options.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_dump_carver.py</code></td>
+      <td><b>Dump Carver &amp; Memory Reconstructor Test</b></td>
+      <td>Validates MDMP parsing, raw memory carving, BSJB stream discovery, Tiny/Fat method body extraction, PE synthesis, and CLI flags.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_decompiler_bridge.py</code></td>
+      <td><b>Decompiler Headless Bridge &amp; Symbol Sync Test</b></td>
+      <td>Validates Ghidra, IDA Pro, and Radare2 script generation, syntax compilation, symbol synchronization, directory exports, and CLI flags.</td>
     </tr>
   </tbody>
 </table>

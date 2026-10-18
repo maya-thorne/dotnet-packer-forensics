@@ -25,6 +25,7 @@ from .cfg import CFGAnalyzer, CFGAnalysisResult, MethodCFG
 from .baml import BamlDecompiler, BamlExtractionResult
 from .native_aot import NativeAOTAnalysisResult, NativeAOTAnalyzer
 from .dump_carver import DumpCarverResult, KernelDumpCarver
+from .decompiler_bridge import DecompilerBridgeEngine, DecompilerBridgeOptions, DecompilerBridgeResult, DecompilerEngine
 from .unpacker_dispatcher import unpack_payload_to_file, unpack_all_to_dir
 from .unpackers.armdot import ArmDotOpcodeTable, ArmDotUnpacker, ArmDotVMDisassembler
 from .unpackers.babel import BabelUnpacker
@@ -138,24 +139,27 @@ class DotNetPackerCore:
         dump_carver_res = KernelDumpCarver.analyze(data, file_name=file_name)
         dump_carver_telemetry = dump_carver_res.telemetry.to_dict()
 
+        # 23. Ghidra & IDA Pro Decompiler Headless Bridge & Symbol Synchronizer
+        decompiler_bridge_res = DecompilerBridgeEngine.analyze(data, file_name=file_name)
+        decompiler_bridge_telemetry = decompiler_bridge_res.telemetry.to_dict()
+
         return build_analysis_report(
-            file_path=file_name, file_size=file_size, elapsed_ms=elapsed_ms,
-            hashes=hashes, assembly_info=assembly_info, detected_protectors=detected_protectors,
-            pe_diag=pe_diag, overlay_bytes=overlay_bytes, pe_size=pe_size, xor_result=xor_result,
+            file_path=file_name, file_size=file_size, elapsed_ms=elapsed_ms, hashes=hashes,
+            assembly_info=assembly_info, detected_protectors=detected_protectors, pe_diag=pe_diag,
+            overlay_bytes=overlay_bytes, pe_size=pe_size, xor_result=xor_result,
             costura_detect=costura_detect, costura_payloads=costura_payloads,
             confuser_detect=confuser_detect, confuser_payloads=confuser_payloads,
-            confuser_strings_list=confuser_strings_list,
-            reactor_detect=reactor_detect, reactor_payloads=reactor_payloads, reactor_methods=reactor_methods,
-            eaz_detect=eaz_detect, eaz_containers=eaz_containers,
-            babel_detect=babel_detect, babel_merged=babel_merged,
-            armdot_detect=armdot_detect, armdot_containers=armdot_containers,
+            confuser_strings_list=confuser_strings_list, reactor_detect=reactor_detect,
+            reactor_payloads=reactor_payloads, reactor_methods=reactor_methods,
+            eaz_detect=eaz_detect, eaz_containers=eaz_containers, babel_detect=babel_detect,
+            babel_merged=babel_merged, armdot_detect=armdot_detect, armdot_containers=armdot_containers,
             intellilock_detect=intellilock_detect, deepsea_detect=deepsea_detect,
             antitamper_detect=antitamper_detect, antidump_detect=antidump_detect,
             native_demux_detect=native_demux_detect, native_demux_payloads=native_demux_payloads,
             threat_rules_telemetry=threat_rules_telemetry, mixed_mode_telemetry=mixed_mode_telemetry,
             cfg_telemetry=cfg_telemetry, baml_telemetry=baml_telemetry,
-            native_aot_telemetry=native_aot_telemetry,
-            dump_carver_telemetry=dump_carver_telemetry,
+            native_aot_telemetry=native_aot_telemetry, dump_carver_telemetry=dump_carver_telemetry,
+            decompiler_bridge_telemetry=decompiler_bridge_telemetry,
         )
 
 
@@ -260,18 +264,12 @@ class DotNetPackerCore:
         """Disassembles all embedded Eazfuscator VM method containers to formatted assembly."""
         with open(input_path, "rb") as f:
             data = f.read()
-        containers = EazfuscatorUnpacker.extract_vm_containers(data)
-        disassembler = EazfuscatorVMDisassembler(opcode_table=custom_table or VMOpcodeTable())
-        disassembled_methods: List[Dict[str, any]] = []
-        for c in containers:
-            for m in c.get("methods", []):
-                instructions = disassembler.disassemble(m["bytecode"])
-                disassembled_methods.append({
-                    "token": m["token_hex"],
-                    "instruction_count": len(instructions),
-                    "disassembly": "\n".join(inst.format() for inst in instructions),
-                })
-        return disassembled_methods
+        disasm = EazfuscatorVMDisassembler(opcode_table=custom_table or VMOpcodeTable())
+        return [
+            {"token": m["token_hex"], "instruction_count": len(ins), "disassembly": "\n".join(i.format() for i in ins)}
+            for c in EazfuscatorUnpacker.extract_vm_containers(data) for m in c.get("methods", [])
+            for ins in [disasm.disassemble(m["bytecode"])]
+        ]
 
     @classmethod
     def devirtualize_armdot(
@@ -293,18 +291,12 @@ class DotNetPackerCore:
         """Disassembles all embedded ArmDot VM method containers to formatted assembly."""
         with open(input_path, "rb") as f:
             data = f.read()
-        containers = ArmDotUnpacker.extract_vm_containers(data)
-        disassembler = ArmDotVMDisassembler(opcode_table=custom_table or ArmDotOpcodeTable())
-        disassembled_methods: List[Dict[str, any]] = []
-        for c in containers:
-            for m in c.get("methods", []):
-                instructions = disassembler.disassemble(m["bytecode"])
-                disassembled_methods.append({
-                    "token": m["token_hex"],
-                    "instruction_count": len(instructions),
-                    "disassembly": "\n".join(inst.format() for inst in instructions),
-                })
-        return disassembled_methods
+        disasm = ArmDotVMDisassembler(opcode_table=custom_table or ArmDotOpcodeTable())
+        return [
+            {"token": m["token_hex"], "instruction_count": len(ins), "disassembly": "\n".join(i.format() for i in ins)}
+            for c in ArmDotUnpacker.extract_vm_containers(data) for m in c.get("methods", [])
+            for ins in [disasm.disassemble(m["bytecode"])]
+        ]
 
     @classmethod
     def extract_armdot_containers(cls, input_path: str) -> List[Dict[str, any]]:
@@ -363,24 +355,16 @@ class DotNetPackerCore:
 
     @classmethod
     def verify_directory(
-        cls,
-        target_dir: str,
-        golden_hashes: Optional[Dict[str, str]] = None,
-        strict_pe: bool = False,
+        cls, target_dir: str, golden_hashes: Optional[Dict[str, str]] = None, strict_pe: bool = False
     ) -> List[PayloadVerificationResult]:
         """Audits all binary payloads in a directory against hash baselines and PE constraints."""
         return PayloadVerifier.verify_directory(
-            target_dir=target_dir,
-            golden_hashes=golden_hashes,
-            strict_pe=strict_pe,
+            target_dir=target_dir, golden_hashes=golden_hashes, strict_pe=strict_pe
         )
 
     @classmethod
     def strip_intellilock(
-        cls,
-        input_path: str,
-        output_path: str,
-        master_seed: int = 0x14725836,
+        cls, input_path: str, output_path: str, master_seed: int = 0x14725836
     ) -> Dict[str, Any]:
         """Neutralizes IntelliLock license envelope, restoring clean assembly."""
         with open(input_path, "rb") as f:
@@ -391,10 +375,8 @@ class DotNetPackerCore:
         with open(output_path, "wb") as f:
             f.write(unlocked_bin)
         return {
-            "unlocked_file": output_path,
-            "size_bytes": len(unlocked_bin),
-            "metadata": meta.to_dict(),
-            "license": lic.to_dict(),
+            "unlocked_file": output_path, "size_bytes": len(unlocked_bin),
+            "metadata": meta.to_dict(), "license": lic.to_dict(),
         }
 
     @classmethod
@@ -469,8 +451,7 @@ class DotNetPackerCore:
 
     @classmethod
     def heal_anti_dump(
-        cls, input_path: str, output_path: Optional[str] = None,
-        options: Optional[AntiDumpHealOptions] = None,
+        cls, input_path: str, output_path: Optional[str] = None, options: Optional[AntiDumpHealOptions] = None,
     ) -> Tuple[bytes, Dict[str, Any]]:
         """Heals anti-dump memory corruptions, reconstructing PE headers and CLR metadata."""
         with open(input_path, "rb") as f:
@@ -489,14 +470,11 @@ class DotNetPackerCore:
 
     @classmethod
     def unpack_anti_dump_dir(
-        cls, input_path: str, output_dir: str,
-        options: Optional[AntiDumpHealOptions] = None,
+        cls, input_path: str, output_dir: str, options: Optional[AntiDumpHealOptions] = None,
     ) -> Dict[str, Any]:
         """Heals dump and exports normalized binary, carved sections, and telemetry to directory."""
         with open(input_path, "rb") as f:
-            return AntiDumpUnpacker.unpack_to_directory(
-                f.read(), output_dir=output_dir, options=options
-            )
+            return AntiDumpUnpacker.unpack_to_directory(f.read(), output_dir=output_dir, options=options)
 
     @classmethod
     def demux_native(cls, input_path: str) -> Dict[str, Any]:
@@ -504,10 +482,7 @@ class DotNetPackerCore:
         with open(input_path, "rb") as f:
             data = f.read()
         telemetry, payloads = NativeDemuxerUnpacker.demux(data)
-        return {
-            "telemetry": telemetry.to_dict(),
-            "payloads": [p.to_dict() for p in payloads],
-        }
+        return {"telemetry": telemetry.to_dict(), "payloads": [p.to_dict() for p in payloads]}
 
     @classmethod
     def route_native(cls, input_path: str, target_os: str = "windows", target_arch: str = "x64") -> Dict[str, Any]:
@@ -526,9 +501,9 @@ class DotNetPackerCore:
         cls, input_path: str, granularity: str = "behavioral", rule_format: str = "combined", options: Optional[Dict[str, Any]] = None
     ) -> RuleGenerationResult:
         """Synthesizes dynamic YARA and Sigma rules from input binary."""
-        return ThreatRuleEngine.synthesize_from_file(
-            input_path, granularity=RuleGranularity(granularity.lower()), rule_format=RuleFormat(rule_format.lower()), options=options
-        )
+        gran = RuleGranularity(granularity.lower())
+        fmt = RuleFormat(rule_format.lower())
+        return ThreatRuleEngine.synthesize_from_file(input_path, granularity=gran, rule_format=fmt, options=options)
 
     @classmethod
     def export_threat_rules(
@@ -688,5 +663,26 @@ class DotNetPackerCore:
         """Carves memory dump and exports assemblies, residual methods, and strings to directory."""
         res = cls.carve_dump(input_path, min_confidence=min_confidence, max_methods=max_methods)
         return KernelDumpCarver.export_to_directory(res, output_dir=output_dir)
+
+    @classmethod
+    def generate_decompiler_bridge(
+        cls, input_path: str, engine: str = "all", base_addr: Optional[int] = None, min_confidence: float = 0.5
+    ) -> DecompilerBridgeResult:
+        """Generates decompiler headless bridge script and symbol synchronization model."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        eng = DecompilerEngine(engine.lower()) if isinstance(engine, str) else engine
+        opts = DecompilerBridgeOptions(engine=eng, base_addr=base_addr or 0x400000, min_confidence=min_confidence)
+        return DecompilerBridgeEngine.analyze(data, options=opts, file_name=os.path.basename(input_path))
+
+    @classmethod
+    def export_decompiler_bridge(
+        cls, input_path: str, output_dir: str, engine: str = "all",
+        base_addr: Optional[int] = None, min_confidence: float = 0.5,
+    ) -> Dict[str, Any]:
+        """Generates and exports headless bridge scripts, batch runners, and symbols to directory."""
+        res = cls.generate_decompiler_bridge(input_path, engine=engine, base_addr=base_addr, min_confidence=min_confidence)
+        return DecompilerBridgeEngine.export_to_directory(res, output_dir=output_dir)
+
 
 

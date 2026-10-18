@@ -232,8 +232,25 @@ from .dump_carver import (
     MethodCarver,
     MinidumpParser,
 )
+from .decompiler_bridge import (
+    CommentType,
+    DecompilerBookmark,
+    DecompilerBridgeEngine,
+    DecompilerBridgeOptions,
+    DecompilerBridgeResult,
+    DecompilerBridgeTelemetry,
+    DecompilerComment,
+    DecompilerEngine,
+    DecompilerSymbol,
+    DecompilerTypeStruct,
+    GhidraBridgeGenerator,
+    IDABridgeGenerator,
+    Radare2BridgeGenerator,
+    SymbolSynchronizer,
+    SymbolType,
+)
 
-__version__ = "2.11.0"
+__version__ = "2.12.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -431,6 +448,21 @@ __all__ = [
     "CarvedAssembly",
     "DumpCarverTelemetry",
     "DumpCarverResult",
+    "DecompilerEngine",
+    "SymbolType",
+    "CommentType",
+    "DecompilerSymbol",
+    "DecompilerComment",
+    "DecompilerBookmark",
+    "DecompilerTypeStruct",
+    "DecompilerBridgeOptions",
+    "DecompilerBridgeTelemetry",
+    "DecompilerBridgeResult",
+    "GhidraBridgeGenerator",
+    "IDABridgeGenerator",
+    "Radare2BridgeGenerator",
+    "SymbolSynchronizer",
+    "DecompilerBridgeEngine",
     "__version__",
 ]
 
