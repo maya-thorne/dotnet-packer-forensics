@@ -382,6 +382,18 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
             for anom in dc["anomaly_flags"][:3]:
                 lines.append(f"  [!] Dump Anomaly: {anom}")
 
+    db = report.get("decompiler_bridge", {})
+    if db.get("total_symbols", 0) > 0 or db.get("total_comments", 0) > 0:
+        lines.append("")
+        lines.append("--- [Decompiler Headless Bridge & Symbol Synchronizer] ---")
+        lines.append(f"  [+] Target Engine      : {db.get('engine', 'all').upper()} ({db.get('generation_time_ms', 0.0)}ms)")
+        lines.append(f"      Symbols Synchronized: {db.get('total_symbols', 0)} (Confidence Avg: {db.get('confidence_avg', 0.0)*100:.1f}%)")
+        lines.append(f"      Comments Placed    : {db.get('total_comments', 0)} ({db.get('total_bookmarks', 0)} bookmarks)")
+        if db.get("rhp_helpers_count", 0) > 0:
+            lines.append(f"      Runtime Helpers    : {db.get('rhp_helpers_count', 0)} Rhp* helpers")
+        if db.get("anomaly_blocks_count", 0) > 0:
+            lines.append(f"      Anomaly Blocks     : {db.get('anomaly_blocks_count', 0)} high-entropy blocks")
+
     if verbose and report.get("sections"):
         lines.append("")
         lines.append("--- [Section Topology & Entropy] ---")

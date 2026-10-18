@@ -417,6 +417,34 @@ def build_parser() -> argparse.ArgumentParser:
         default=100,
         help="Maximum residual CIL methods to carve from memory dump (default: 100)",
     )
+    # Ghidra & IDA Pro Decompiler Headless Bridge
+    parser.add_argument(
+        "--decompiler-bridge",
+        action="store_true",
+        help="Generate headless decompiler bridge scripts and synchronize forensic symbols",
+    )
+    parser.add_argument(
+        "--bridge-engine",
+        choices=["ghidra", "ida_pro", "radare2", "all"],
+        default="all",
+        help="Target disassembler engine for bridge generation (default: 'all')",
+    )
+    parser.add_argument(
+        "--bridge-base-addr",
+        type=lambda x: int(x, 0),
+        default=0x400000,
+        help="Target image base address for script RVA rebasing (default: 0x400000)",
+    )
+    parser.add_argument(
+        "--bridge-out",
+        help="Directory path to export generated decompiler scripts, batch runners, and symbols",
+    )
+    parser.add_argument(
+        "--bridge-min-confidence",
+        type=float,
+        default=0.5,
+        help="Minimum confidence threshold [0.0 - 1.0] for symbol inclusion (default: 0.5)",
+    )
     parser.add_argument(
         "--format", choices=["text", "json"], default="text", help="Telemetry format (text or json)"
     )

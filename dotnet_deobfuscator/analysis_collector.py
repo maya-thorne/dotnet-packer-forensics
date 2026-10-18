@@ -43,6 +43,7 @@ def build_analysis_report(
     baml_telemetry: Optional[Dict[str, Any]] = None,
     native_aot_telemetry: Optional[Dict[str, Any]] = None,
     dump_carver_telemetry: Optional[Dict[str, Any]] = None,
+    decompiler_bridge_telemetry: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Assembles all subsystem forensic findings into a unified analysis report dictionary."""
     return {
@@ -302,5 +303,17 @@ def build_analysis_report(
             "methods_recovered": 0,
             "strings_recovered": 0,
             "anomaly_flags": [],
+        },
+        "decompiler_bridge": decompiler_bridge_telemetry or {
+            "total_symbols": 0,
+            "total_comments": 0,
+            "total_bookmarks": 0,
+            "total_structs": 0,
+            "engine": "all",
+            "generation_time_ms": 0.0,
+            "confidence_avg": 0.0,
+            "sources_count": 0,
+            "anomaly_blocks_count": 0,
+            "rhp_helpers_count": 0,
         },
     }

@@ -633,6 +633,40 @@ def main(argv: Optional[list] = None) -> int:
         except Exception as e:
             sys.stderr.write(f"[-] Memory dump carving failed: {e}\n")
 
+    # Ghidra & IDA Pro Decompiler Headless Bridge
+    if args.decompiler_bridge or args.bridge_out:
+        try:
+            br_res = DotNetPackerCore.generate_decompiler_bridge(
+                args.target,
+                engine=args.bridge_engine,
+                base_addr=args.bridge_base_addr,
+                min_confidence=args.bridge_min_confidence,
+            )
+            sys.stdout.write(
+                f"[+] Decompiler Bridge: {br_res.engine.value.upper()} "
+                f"({br_res.telemetry.total_symbols} symbols, {br_res.telemetry.total_comments} comments, "
+                f"{br_res.telemetry.total_bookmarks} bookmarks @ {hex(br_res.base_addr)})\n"
+            )
+            if br_res.symbols:
+                sys.stdout.write(f"\n--- [Synchronized Decompiler Symbols: {len(br_res.symbols)}] ---\n")
+                for s in br_res.symbols[:10]:
+                    sys.stdout.write(f"  [0x{s.rva:08X}] {s.name} ({s.symbol_type.value}) - Conf: {s.confidence*100:.0f}%\n")
+                if len(br_res.symbols) > 10:
+                    sys.stdout.write(f"  ... and {len(br_res.symbols) - 10} more symbols\n")
+            if args.bridge_out:
+                exp_br = DotNetPackerCore.export_decompiler_bridge(
+                    args.target,
+                    output_dir=args.bridge_out,
+                    engine=args.bridge_engine,
+                    base_addr=args.bridge_base_addr,
+                    min_confidence=args.bridge_min_confidence,
+                )
+                sys.stdout.write(
+                    f"[+] Exported {len(exp_br['exported_files'])} decompiler bridge files to -> {args.bridge_out}\n"
+                )
+        except Exception as e:
+            sys.stderr.write(f"[-] Decompiler bridge generation failed: {e}\n")
+
     if args.format == "json":
         sys.stdout.write(json.dumps(report, indent=2) + "\n")
     else:
