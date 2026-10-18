@@ -19,7 +19,6 @@ from .unpackers.armdot_vm import ArmDotOpcodeTable
 from .unpackers.eazfuscator_vm import VMOpcodeTable
 
 
-
 def main(argv: Optional[list] = None) -> int:
     # Ensure stdout handles UTF-8 gracefully across Windows consoles
     if hasattr(sys.stdout, "reconfigure"):
@@ -114,6 +113,32 @@ def main(argv: Optional[list] = None) -> int:
         parser.print_usage(sys.stderr)
         sys.stderr.write("[-] Error: the following arguments are required: target\n")
         return 2
+
+    # Multi-Engine Binary Diffing Mode
+    if args.diff_target:
+        try:
+            from .diffing import BinaryDiffEngine, BinaryDiffOptions, DiffEngine, HTMLDiffReporter
+            opts = BinaryDiffOptions(engine=DiffEngine(args.diff_engine.lower()), min_similarity_threshold=args.diff_threshold)
+            diff_res = DotNetPackerCore.diff_binaries(args.target, args.diff_target, options=opts)
+            if args.format == "json":
+                sys.stdout.write(json.dumps(diff_res.to_dict(), indent=2) + "\n")
+            else:
+                sys.stdout.write(BinaryDiffEngine.format_text_diff(diff_res) + "\n")
+            if args.diff_out:
+                exp_diff = DotNetPackerCore.export_diff_report(diff_res, output_dir=args.diff_out)
+                sys.stdout.write(f"[+] Exported {exp_diff['files_count']} diff report files to -> {args.diff_out}\n")
+            if args.diff_html:
+                with open(args.diff_html, "w", encoding="utf-8") as f:
+                    f.write(HTMLDiffReporter.generate(diff_res))
+                sys.stdout.write(f"[+] Exported visual HTML diff report to -> {args.diff_html}\n")
+            if args.diff_json:
+                with open(args.diff_json, "w", encoding="utf-8") as f:
+                    json.dump(diff_res.to_dict(), f, indent=2)
+                sys.stdout.write(f"[+] Exported JSON diff summary to -> {args.diff_json}\n")
+            return 0
+        except Exception as e:
+            sys.stderr.write(f"[-] Binary diffing failed: {e}\n")
+            return 1
 
     try:
         report = DotNetPackerCore.analyze_file(args.target, master_key=args.key)
@@ -499,9 +524,7 @@ def main(argv: Optional[list] = None) -> int:
     if args.mixed_mode or args.trace_transitions or args.mixed_mode_out:
         try:
             mm_res = DotNetPackerCore.analyze_mixed_mode(args.target)
-            sys.stdout.write(
-                f"[+] Mixed-Mode Inspection: {mm_res.telemetry.mixed_mode_type} (Risk: {mm_res.telemetry.risk_severity.upper()}, Score: {mm_res.telemetry.risk_score}/100)\n"
-            )
+            sys.stdout.write(f"[+] Mixed-Mode Inspection: {mm_res.telemetry.mixed_mode_type} (Risk: {mm_res.telemetry.risk_severity.upper()}, Score: {mm_res.telemetry.risk_score}/100)\n")
             if args.trace_transitions:
                 sys.stdout.write(f"\n--- [CIL <-> Native Boundary Transitions: {len(mm_res.transitions)}] ---\n")
                 for tr in mm_res.transitions:
@@ -517,9 +540,7 @@ def main(argv: Optional[list] = None) -> int:
     if args.cfg or args.cfg_out or args.cfg_token:
         try:
             cfg_res = DotNetPackerCore.analyze_cfg(args.target)
-            sys.stdout.write(
-                f"[+] CIL CFG Analysis: {cfg_res.telemetry.total_methods_analyzed} methods analyzed ({cfg_res.telemetry.total_blocks} blocks, {cfg_res.telemetry.total_edges} edges, peak complexity={cfg_res.telemetry.max_cyclomatic_complexity})\n"
-            )
+            sys.stdout.write(f"[+] CIL CFG Analysis: {cfg_res.telemetry.total_methods_analyzed} methods ({cfg_res.telemetry.total_blocks} blocks, {cfg_res.telemetry.total_edges} edges, peak complexity={cfg_res.telemetry.max_cyclomatic_complexity})\n")
             if cfg_res.telemetry.high_entropy_blocks_total > 0:
                 sys.stdout.write(f"    [!] Identified {cfg_res.telemetry.high_entropy_blocks_total} high-entropy encrypted/packed basic blocks\n")
             if cfg_res.telemetry.suspicious_methods:
@@ -537,43 +558,28 @@ def main(argv: Optional[list] = None) -> int:
     if args.baml or args.baml_out:
         try:
             baml_res = DotNetPackerCore.analyze_baml(args.target)
-            sys.stdout.write(
-                f"[+] WPF BAML Extraction: {len(baml_res.decompiled_items)} UI documents decompiled "
-                f"({baml_res.telemetry.total_elements} elements, {baml_res.telemetry.total_attributes} properties)\n"
-            )
+            sys.stdout.write(f"[+] WPF BAML Extraction: {len(baml_res.decompiled_items)} UI docs ({baml_res.telemetry.total_elements} elements, {baml_res.telemetry.total_attributes} props)\n")
             if baml_res.suspicious_findings:
                 sys.stdout.write(f"    [!] Identified {len(baml_res.suspicious_findings)} UI security anomaly findings:\n")
                 for finding in baml_res.suspicious_findings[:4]:
                     sys.stdout.write(f"        * {finding}\n")
             if args.baml_out:
-                exp_baml = DotNetPackerCore.export_baml(
-                    args.target, output_dir=args.baml_out, export_raw_baml=args.baml_raw
-                )
-                sys.stdout.write(
-                    f"[+] Exported {len(exp_baml['exported_files'])} XAML and manifest files to -> {args.baml_out}\n"
-                )
+                exp_baml = DotNetPackerCore.export_baml(args.target, output_dir=args.baml_out, export_raw_baml=args.baml_raw)
+                sys.stdout.write(f"[+] Exported {len(exp_baml['exported_files'])} XAML and manifest files to -> {args.baml_out}\n")
         except Exception as e:
             sys.stderr.write(f"[-] BAML decompiler failed: {e}\n")
 
     # Native AOT & ReadyToRun (R2R) Forensics
     if args.native_aot or args.r2r_disasm or args.aot_symbols or args.native_aot_out:
         try:
-            aot_res = DotNetPackerCore.analyze_native_aot(
-                args.target, max_methods=args.native_aot_max_methods
-            )
-            sys.stdout.write(
-                f"[+] Native AOT / R2R Inspection: {aot_res.telemetry.compilation_type} "
-                f"({aot_res.telemetry.inferred_dotnet_version}) - Arch: {aot_res.telemetry.target_arch.upper()}\n"
-            )
+            aot_res = DotNetPackerCore.analyze_native_aot(args.target, max_methods=args.native_aot_max_methods)
+            sys.stdout.write(f"[+] Native AOT / R2R Inspection: {aot_res.telemetry.compilation_type} ({aot_res.telemetry.inferred_dotnet_version}) - Arch: {aot_res.telemetry.target_arch.upper()}\n")
             if aot_res.telemetry.compiler_identifier:
                 sys.stdout.write(f"    Compiler ID: {aot_res.telemetry.compiler_identifier}\n")
             if aot_res.telemetry.r2r_sections_count > 0:
                 sys.stdout.write(f"    R2R Sections: {aot_res.telemetry.r2r_sections_count} sections\n")
             if aot_res.telemetry.runtime_functions_count > 0:
-                sys.stdout.write(
-                    f"    Runtime Functions: {aot_res.telemetry.runtime_functions_count} methods "
-                    f"({aot_res.telemetry.method_entrypoints_count} mapped MethodDef entrypoints)\n"
-                )
+                sys.stdout.write(f"    Runtime Functions: {aot_res.telemetry.runtime_functions_count} methods ({aot_res.telemetry.method_entrypoints_count} mapped MethodDef entrypoints)\n")
             if args.aot_symbols and aot_res.symbols:
                 sys.stdout.write(f"\n--- [Recovered Native Symbols: {len(aot_res.symbols)}] ---\n")
                 for s in aot_res.symbols[:20]:
@@ -586,16 +592,10 @@ def main(argv: Optional[list] = None) -> int:
                     for ins in dm.instructions[:8]:
                         target = f" -> {hex(ins.target_rva)}" if ins.target_rva else ""
                         helper = f" <{ins.helper_name}>" if ins.helper_name else ""
-                        sys.stdout.write(
-                            f"  0x{ins.offset:08X}:  {ins.raw_bytes:<12} {ins.mnemonic:<6} {ins.operands}{target}{helper}\n"
-                        )
+                        sys.stdout.write(f"  0x{ins.offset:08X}:  {ins.raw_bytes:<12} {ins.mnemonic:<6} {ins.operands}{target}{helper}\n")
             if args.native_aot_out:
-                exp_aot = DotNetPackerCore.export_native_aot(
-                    args.target, output_dir=args.native_aot_out, max_methods=args.native_aot_max_methods
-                )
-                sys.stdout.write(
-                    f"[+] Exported {len(exp_aot['exported_files'])} AOT/R2R forensic files to -> {args.native_aot_out}\n"
-                )
+                exp_aot = DotNetPackerCore.export_native_aot(args.target, output_dir=args.native_aot_out, max_methods=args.native_aot_max_methods)
+                sys.stdout.write(f"[+] Exported {len(exp_aot['exported_files'])} AOT/R2R forensic files to -> {args.native_aot_out}\n")
         except Exception as e:
             sys.stderr.write(f"[-] Native AOT / R2R analysis failed: {e}\n")
 

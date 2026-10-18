@@ -89,6 +89,9 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -v
 
 # Or extract decrypted payload directly to disk
 python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_payload.exe
+
+# Compare original vs packed binary and export visual HTML diff dashboard
+python -m dotnet_deobfuscator --diff original.exe --diff-against packed.exe --diff-out ./diff_results --diff-html diff.html
 ```
 
 <span id="cli-options-matrix"></span>
@@ -193,10 +196,17 @@ python -m dotnet_deobfuscator samples/xorPacker_packed_sample.exe -o unpacked_pa
 | `--bridge-base-addr` | Base address for RVA rebasing (e.g. `0x400000` or `0x140000000`) | `0x400000` |
 | `--bridge-out` | Directory path to export generated scripts, runner batch files, and symbols | None |
 | `--bridge-min-confidence` | Minimum symbol confidence threshold [0.0 - 1.0] | `0.5` |
+| `--diff` | Baseline binary path to compare against target assembly | None |
+| `--diff-against` | Target comparison binary path (alternative to positional argument) | None |
+| `--diff-engine` | Diff comparison engine (`metadata`, `bytecode`, `cfg`, `ast`, `all`) | `all` |
+| `--diff-out` | Output directory path for diff reports (JSON, CSV, HTML dashboard, TXT) | None |
+| `--diff-threshold` | Similarity alerting threshold [0.0 - 1.0] for divergence reporting | `0.8` |
+| `--diff-html` | Output file path for standalone offline interactive HTML diff dashboard | None |
+| `--diff-json` | Output structured diff telemetry in JSON format to stdout | `False` |
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v2.12.0` |
+| `--version` | Display engine version and exit | `v2.13.0` |
 
 
 </details>
@@ -606,6 +616,41 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><b>Decompiler Bridge Engine Facade</b></td>
       <td>Orchestrates multi-engine script generation, symbol synchronization, telemetry aggregation, and safe directory exports.</td>
     </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/diffing/models.py</code></td>
+      <td><b>Binary Diffing Models &amp; Structures</b></td>
+      <td>Encapsulates DiffCategory, ChangeType, DiffEngine, ObfuscationImpact enums, SectionDiff, MethodDiff, and telemetry results.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/diffing/metadata_differ.py</code></td>
+      <td><b>PE &amp; CLI Metadata Differ</b></td>
+      <td>Measures section alignment shifts, entropy deltas, injected protector sections (.necro, .eazvm, .armdot), and BSJB metadata drift.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/diffing/bytecode_differ.py</code></td>
+      <td><b>CIL Bytecode Sequence Differ</b></td>
+      <td>Computes opcode normalization, multiset Jaccard similarity, normalized Levenshtein distance, and 3-gram Sørensen-Dice similarity.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/diffing/cfg_differ.py</code></td>
+      <td><b>Control Flow Graph (CFG) Differ</b></td>
+      <td>Builds basic block topologies, matches block signatures, measures McCabe complexity variance, and identifies flattening dispatchers.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/diffing/ast_differ.py</code></td>
+      <td><b>AST Flow Graph Differ</b></td>
+      <td>Abstracts statement-level control structures, compares loop topologies, and detects dead-code injection and opaque predicates.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/diffing/html_reporter.py</code></td>
+      <td><b>Visual HTML Diff Dashboard Generator</b></td>
+      <td>Renders self-contained offline dark-themed HTML reports with live filtering, metrics cards, side-by-side comparison tables, and XSS escaping.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/diffing/comparator.py</code></td>
+      <td><b>Binary Diff Engine Facade</b></td>
+      <td>Pairs assembly methods, computes composite weighted similarity, classifies obfuscation impact, formats text diffs, and manages directory exports.</td>
+    </tr>
   </tbody>
 </table>
 
@@ -755,6 +800,11 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>tests/test_decompiler_bridge.py</code></td>
       <td><b>Decompiler Headless Bridge &amp; Symbol Sync Test</b></td>
       <td>Validates Ghidra, IDA Pro, and Radare2 script generation, syntax compilation, symbol synchronization, directory exports, and CLI flags.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_binary_diffing.py</code></td>
+      <td><b>Binary Diffing &amp; AST Flow Test</b></td>
+      <td>Validates PE structural differ, CIL opcode sequence alignment, CFG topology comparison, AST flow matching, HTML report escaping, directory exports, and CLI flags.</td>
     </tr>
   </tbody>
 </table>

@@ -445,9 +445,41 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.5,
         help="Minimum confidence threshold [0.0 - 1.0] for symbol inclusion (default: 0.5)",
     )
+    # Multi-Engine Binary Diffing & AST Flow Graph Comparator
+    parser.add_argument(
+        "--diff",
+        "--diff-against",
+        dest="diff_target",
+        help="Path to second binary to compare against target for packing & structural diffing",
+    )
+    parser.add_argument(
+        "--diff-engine",
+        choices=["all", "metadata", "bytecode", "cfg", "ast"],
+        default="all",
+        help="Comparison focus engine for binary diffing (default: 'all')",
+    )
+    parser.add_argument(
+        "--diff-out",
+        help="Directory path to export diff summary JSON, method CSV, unified diff, and HTML dashboard",
+    )
+    parser.add_argument(
+        "--diff-threshold",
+        type=float,
+        default=0.8,
+        help="Minimum method similarity threshold [0.0 - 1.0] for method pairing (default: 0.8)",
+    )
+    parser.add_argument(
+        "--diff-html",
+        help="Dedicated file path to export standalone HTML visual diff dashboard",
+    )
+    parser.add_argument(
+        "--diff-json",
+        help="Dedicated file path to export JSON diff summary",
+    )
     parser.add_argument(
         "--format", choices=["text", "json"], default="text", help="Telemetry format (text or json)"
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Display verbose section metrics")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return parser
+

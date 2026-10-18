@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.13.0] - 2026-10-18
+
+### Added
+- **Multi-Engine Binary Diffing & AST Flow Graph Comparator (`dotnet_deobfuscator.diffing`)**:
+  - Comprehensive structural and semantic comparison architecture across packed and unpacked .NET binaries:
+    - Data models and enums (`models.py`): `DiffCategory` (PE_STRUCTURAL, METADATA, BYTECODE, CONTROL_FLOW, AST_TOPOLOGY, SUMMARY), `ChangeType` (ADDED, REMOVED, MODIFIED, UNCHANGED, STRUCTURAL_SHIFT), `DiffEngine` (METADATA, BYTECODE, CFG, AST, ALL), `ObfuscationImpact` (LOW, MEDIUM, HIGH, CRITICAL), `SectionDiff`, `MethodDiff`, `MetadataDiff`, `BytecodeDiff`, `CFGGraphDiff`, `ASTFlowDiff`, `BinaryDiffOptions`, `BinaryDiffTelemetry`, and `BinaryDiffResult`.
+    - Hardened security primitives: `safe_path` (strict directory traversal defenses with canonical path verification), `zeroize_buffer` (ctypes memory wiping), and `calculate_entropy`.
+  - PE structural and CLI metadata differ (`MetadataDiffer` in `metadata_differ.py`):
+    - Computes section alignment shifts, raw size deltas, virtual address drift, and section entropy variances.
+    - Automated detection of injected protector sections (`.necro`, `.eazvm`, `.armdot`, `.tamper`, `.reactor`, etc.) with obfuscation impact classification.
+    - Deep ECMA-335 BSJB metadata stream comparison: tracks `#~`, `#-`, `#Strings`, `#US`, `#Blob`, and `#GUID` stream presence and size divergence.
+    - Entrypoint and CLR descriptor comparison: detects native-to-managed entrypoint redirection and COM descriptor flag alterations.
+  - CIL instruction sequence and multiset differ (`BytecodeDiffer` in `bytecode_differ.py`):
+    - Opcode sequence normalization and multiset Jaccard similarity index computation.
+    - Dynamic-programming normalized Levenshtein edit distance calculation across instruction streams.
+    - 3-gram character and token Sørensen-Dice similarity evaluation.
+    - Aggregate weighted sequence similarity scoring and instruction insertion/deletion tracking.
+  - Control flow graph topology comparator (`CFGDiffer` in `cfg_differ.py`):
+    - Disassembles CIL method bodies and synthesizes basic block control flow graphs (`MethodCFG`).
+    - Basic block signature matching based on leader offsets, instruction count, opcode hash, and branch targets.
+    - Computes McCabe cyclomatic complexity shifts and directed edge structural changes (fallthrough, conditional, unconditional, switch).
+    - Control flow flattening signature detection: pinpoints state dispatchers and anomalous switch statement densities.
+  - Abstract syntax tree (AST) flow graph differ (`ASTDiffer` in `ast_differ.py`):
+    - Reconstructs statement-level abstract syntax structures (assignments, method invocations, conditional branches, loops).
+    - Measures loop topology alterations, nesting depth changes, and branch target drift.
+    - Identifies dead-code injection and opaque predicate tautology patterns introduced by protectors.
+  - Self-contained interactive offline HTML visual diff dashboard (`HTMLDiffReporter` in `html_reporter.py`):
+    - Generates modern, zero-dependency offline HTML reports with dark theme styling.
+    - Real-time client-side search and category filtering for rapid triage.
+    - Visual metrics cards (composite similarity score, obfuscation impact badge, section and method change counters).
+    - Side-by-side section and method comparison tables with color-coded diff statuses and strict HTML escaping.
+  - High-level orchestrator facade (`BinaryDiffEngine` in `comparator.py`) and safe export pipelines:
+    - Automatically discovers and pairs methods between baseline and target assemblies (supports Tiny and Fat header extraction).
+    - Calculates composite weighted similarity score combining metadata, bytecode, CFG, and AST dimensions.
+    - Classifies obfuscation impact level (`LOW` to `CRITICAL`) based on structural drift and complexity shifts.
+    - Produces unified text diff formatting and multi-format safe directory export (`summary.json`, `methods.json`, `sections.json`, `diff.txt`, `report.html`).
+    - Integrated with core engine APIs: `DotNetPackerCore.diff_binaries()` and `DotNetPackerCore.export_diff_report()`.
+- **CLI Toolchain Integration**:
+  - Added `--diff <BASELINE_FILE>` and `--diff-against <TARGET_FILE>` options for side-by-side binary comparison.
+  - Added `--diff-engine {metadata,bytecode,cfg,ast,all}` option (default: `all`).
+  - Added `--diff-out <DIR>` option for exporting diff summaries, section maps, method diffs, and HTML reports.
+  - Added `--diff-threshold <FLOAT>` option for similarity alerting threshold (default: `0.8`).
+  - Added `--diff-html <FILE>` option for standalone interactive HTML diff dashboard export.
+  - Added `--diff-json` flag for machine-readable JSON output to stdout.
+- **Comprehensive Unit & Integration Test Suite (`tests/test_binary_diffing.py`)**:
+  - 18 dedicated unit and integration tests covering data models, path traversal defenses, buffer zeroization, metadata differ, bytecode differ, CFG differ, AST differ, HTML reporter escaping, orchestrator method pairing, export directories, and CLI execution (expanding total test suite to 456 passing tests).
+
 ## [2.12.0] - 2026-10-18
 
 ### Added
