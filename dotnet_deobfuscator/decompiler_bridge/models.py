@@ -18,10 +18,12 @@ class SecurityError(Exception):
 def safe_path(base_dir: str, target_path: str) -> str:
     """Resolves and validates that target_path resides safely within base_dir."""
     abs_base = os.path.abspath(base_dir)
+    # Normalize path separators for cross-platform traversal defense
+    normalized_segment = target_path.replace("\\", "/").replace("/", os.sep)
     if os.path.isabs(target_path):
         abs_target = os.path.abspath(target_path)
     else:
-        abs_target = os.path.abspath(os.path.join(abs_base, target_path))
+        abs_target = os.path.abspath(os.path.join(abs_base, normalized_segment))
     try:
         common = os.path.commonpath([abs_base, abs_target])
     except ValueError as e:
