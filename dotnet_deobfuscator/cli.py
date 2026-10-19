@@ -439,14 +439,8 @@ def main(argv: Optional[list] = None) -> int:
 
     if args.route_arch:
         try:
-            route_res = DotNetPackerCore.route_native(
-                args.target, target_os=args.route_os, target_arch=args.route_arch
-            )
-            sys.stdout.write(
-                f"[+] Platform Route Result for '{args.route_os}-{args.route_arch}': {route_res.get('resolution_status')}\n"
-            )
-            sys.stdout.write(f"    * Status: {route_res.get('resolution_status')}\n")
-            sys.stdout.write(f"    * Reason: {route_res.get('reason')}\n")
+            route_res = DotNetPackerCore.route_native(args.target, target_os=args.route_os, target_arch=args.route_arch)
+            sys.stdout.write(f"[+] Platform Route for '{args.route_os}-{args.route_arch}': {route_res.get('resolution_status')} ({route_res.get('reason')})\n")
             matched = route_res.get("matched_payload")
             if matched:
                 sys.stdout.write(f"    * Matched Binary: {matched.get('name')} (Format: {matched.get('format')})\n")
@@ -524,15 +518,15 @@ def main(argv: Optional[list] = None) -> int:
     if args.mixed_mode or args.trace_transitions or args.mixed_mode_out:
         try:
             mm_res = DotNetPackerCore.analyze_mixed_mode(args.target)
-            sys.stdout.write(f"[+] Mixed-Mode Inspection: {mm_res.telemetry.mixed_mode_type} (Risk: {mm_res.telemetry.risk_severity.upper()}, Score: {mm_res.telemetry.risk_score}/100)\n")
+            mt = mm_res.telemetry
+            sys.stdout.write(f"[+] Mixed-Mode: {mt.mixed_mode_type} (Risk: {mt.risk_severity.upper()}, Score: {mt.risk_score}/100)\n")
             if args.trace_transitions:
-                sys.stdout.write(f"\n--- [CIL <-> Native Boundary Transitions: {len(mm_res.transitions)}] ---\n")
+                sys.stdout.write(f"\n--- [CIL <-> Native Transitions: {len(mm_res.transitions)}] ---\n")
                 for tr in mm_res.transitions:
-                    sys.stdout.write(f"  [{tr.transition_id}] {tr.direction.value.upper()}: {tr.source_location} -> {tr.target_location}\n")
-                    sys.stdout.write(f"     Description: {tr.description}\n")
+                    sys.stdout.write(f"  [{tr.transition_id}] {tr.direction.value.upper()}: {tr.source_location} -> {tr.target_location} ({tr.description})\n")
             if args.mixed_mode_out:
                 exp_mm = DotNetPackerCore.export_mixed_mode(args.target, output_dir=args.mixed_mode_out)
-                sys.stdout.write(f"[+] Exported {len(exp_mm['exported_files'])} mixed-mode forensic files to -> {args.mixed_mode_out}\n")
+                sys.stdout.write(f"[+] Exported {len(exp_mm['exported_files'])} mixed-mode files to -> {args.mixed_mode_out}\n")
         except Exception as e:
             sys.stderr.write(f"[-] Mixed-mode analysis failed: {e}\n")
 
@@ -573,13 +567,12 @@ def main(argv: Optional[list] = None) -> int:
     if args.native_aot or args.r2r_disasm or args.aot_symbols or args.native_aot_out:
         try:
             aot_res = DotNetPackerCore.analyze_native_aot(args.target, max_methods=args.native_aot_max_methods)
-            sys.stdout.write(f"[+] Native AOT / R2R Inspection: {aot_res.telemetry.compilation_type} ({aot_res.telemetry.inferred_dotnet_version}) - Arch: {aot_res.telemetry.target_arch.upper()}\n")
-            if aot_res.telemetry.compiler_identifier:
-                sys.stdout.write(f"    Compiler ID: {aot_res.telemetry.compiler_identifier}\n")
-            if aot_res.telemetry.r2r_sections_count > 0:
-                sys.stdout.write(f"    R2R Sections: {aot_res.telemetry.r2r_sections_count} sections\n")
-            if aot_res.telemetry.runtime_functions_count > 0:
-                sys.stdout.write(f"    Runtime Functions: {aot_res.telemetry.runtime_functions_count} methods ({aot_res.telemetry.method_entrypoints_count} mapped MethodDef entrypoints)\n")
+            at = aot_res.telemetry
+            sys.stdout.write(f"[+] Native AOT / R2R Inspection: {at.compilation_type} ({at.inferred_dotnet_version}) - Arch: {at.target_arch.upper()}\n")
+            if at.compiler_identifier:
+                sys.stdout.write(f"    Compiler ID: {at.compiler_identifier}\n")
+            if at.r2r_sections_count > 0:
+                sys.stdout.write(f"    R2R Sections: {at.r2r_sections_count} sections, {at.runtime_functions_count} methods\n")
             if args.aot_symbols and aot_res.symbols:
                 sys.stdout.write(f"\n--- [Recovered Native Symbols: {len(aot_res.symbols)}] ---\n")
                 for s in aot_res.symbols[:20]:
@@ -603,14 +596,12 @@ def main(argv: Optional[list] = None) -> int:
     if args.dump_carver or args.dump_extract_methods or args.dump_out:
         try:
             dump_res = DotNetPackerCore.carve_dump(
-                args.target,
-                min_confidence=args.dump_min_confidence,
-                max_methods=args.dump_max_methods,
+                args.target, min_confidence=args.dump_min_confidence, max_methods=args.dump_max_methods
             )
+            dt = dump_res.telemetry
             sys.stdout.write(
-                f"[+] Memory Dump Carving: {dump_res.telemetry.dump_format.upper()} ({dump_res.telemetry.dump_size:,} bytes)\n"
-                f"    Ranges: {dump_res.telemetry.memory_ranges_scanned} scanned, BSJB Roots: {dump_res.telemetry.bsjb_roots_found}, "
-                f"Assemblies: {dump_res.telemetry.assemblies_carved}, Methods: {dump_res.telemetry.methods_recovered}\n"
+                f"[+] Memory Dump Carving: {dt.dump_format.upper()} ({dt.dump_size:,}b, {dt.memory_ranges_scanned} ranges, "
+                f"{dt.bsjb_roots_found} roots, {dt.assemblies_carved} asms, {dt.methods_recovered} methods)\n"
             )
             if dump_res.carved_assemblies:
                 sys.stdout.write(f"\n--- [Carved Assemblies: {len(dump_res.carved_assemblies)}] ---\n")
@@ -622,14 +613,9 @@ def main(argv: Optional[list] = None) -> int:
                     sys.stdout.write(f"  [0x{m.token:08X} @ {hex(m.offset)}] {m.format.upper()} ({m.code_size}b) - Entropy: {m.entropy:.2f}\n")
             if args.dump_out:
                 exp_dump = DotNetPackerCore.export_carved_dump(
-                    args.target,
-                    output_dir=args.dump_out,
-                    min_confidence=args.dump_min_confidence,
-                    max_methods=args.dump_max_methods,
+                    args.target, output_dir=args.dump_out, min_confidence=args.dump_min_confidence, max_methods=args.dump_max_methods,
                 )
-                sys.stdout.write(
-                    f"[+] Exported {len(exp_dump['exported_files'])} carved dump files to -> {args.dump_out}\n"
-                )
+                sys.stdout.write(f"[+] Exported {len(exp_dump['exported_files'])} carved dump files to -> {args.dump_out}\n")
         except Exception as e:
             sys.stderr.write(f"[-] Memory dump carving failed: {e}\n")
 
@@ -637,16 +623,10 @@ def main(argv: Optional[list] = None) -> int:
     if args.decompiler_bridge or args.bridge_out:
         try:
             br_res = DotNetPackerCore.generate_decompiler_bridge(
-                args.target,
-                engine=args.bridge_engine,
-                base_addr=args.bridge_base_addr,
-                min_confidence=args.bridge_min_confidence,
+                args.target, engine=args.bridge_engine, base_addr=args.bridge_base_addr, min_confidence=args.bridge_min_confidence,
             )
-            sys.stdout.write(
-                f"[+] Decompiler Bridge: {br_res.engine.value.upper()} "
-                f"({br_res.telemetry.total_symbols} symbols, {br_res.telemetry.total_comments} comments, "
-                f"{br_res.telemetry.total_bookmarks} bookmarks @ {hex(br_res.base_addr)})\n"
-            )
+            bt = br_res.telemetry
+            sys.stdout.write(f"[+] Decompiler Bridge: {br_res.engine.value.upper()} ({bt.total_symbols} syms, {bt.total_comments} cmts, {bt.total_bookmarks} bms @ {hex(br_res.base_addr)})\n")
             if br_res.symbols:
                 sys.stdout.write(f"\n--- [Synchronized Decompiler Symbols: {len(br_res.symbols)}] ---\n")
                 for s in br_res.symbols[:10]:
@@ -655,17 +635,52 @@ def main(argv: Optional[list] = None) -> int:
                     sys.stdout.write(f"  ... and {len(br_res.symbols) - 10} more symbols\n")
             if args.bridge_out:
                 exp_br = DotNetPackerCore.export_decompiler_bridge(
-                    args.target,
-                    output_dir=args.bridge_out,
-                    engine=args.bridge_engine,
-                    base_addr=args.bridge_base_addr,
-                    min_confidence=args.bridge_min_confidence,
+                    args.target, output_dir=args.bridge_out, engine=args.bridge_engine, base_addr=args.bridge_base_addr, min_confidence=args.bridge_min_confidence,
                 )
-                sys.stdout.write(
-                    f"[+] Exported {len(exp_br['exported_files'])} decompiler bridge files to -> {args.bridge_out}\n"
-                )
+                sys.stdout.write(f"[+] Exported {len(exp_br['exported_files'])} decompiler bridge files to -> {args.bridge_out}\n")
         except Exception as e:
             sys.stderr.write(f"[-] Decompiler bridge generation failed: {e}\n")
+
+    # JIT Compilation Tracing & Bytecode Capture Harness
+    if args.jit_trace or args.jit_trace_log or args.jit_out:
+        try:
+            from .jit_tracer import JITCaptureOptions, JITTracerEngine, OptimizationTier
+            tier_map = {
+                "minopt": OptimizationTier.TIER_0_MINOPT,
+                "quickjit": OptimizationTier.TIER_0_QUICKJIT,
+                "optimized": OptimizationTier.TIER_1_OPTIMIZED,
+            }
+            jit_opts = JITCaptureOptions(
+                emulate_unpacker=True,
+                max_methods=args.jit_max_methods,
+                export_reconstructed_pe=args.jit_restore_pe or bool(args.jit_out),
+                target_tier=tier_map.get(args.jit_tier, OptimizationTier.TIER_0_MINOPT),
+            )
+            if args.jit_trace_log:
+                jit_res = JITTracerEngine.parse_trace_file(
+                    args.jit_trace_log, base_binary_path=args.target, options=jit_opts
+                )
+            else:
+                jit_res = DotNetPackerCore.trace_jit_compilation(args.target, options=jit_opts)
+
+            sys.stdout.write(
+                f"[+] JIT Compilation Tracing: {jit_res.telemetry.methods_captured} methods captured "
+                f"({jit_res.telemetry.methods_validated} validated, {jit_res.telemetry.total_bytes_captured} bytes, "
+                f"{jit_res.telemetry.hooks_detected} hooks detected)\n"
+            )
+            if jit_res.hooks:
+                sys.stdout.write(f"\n--- [Active JIT Hooks: {len(jit_res.hooks)}] ---\n")
+                for h in jit_res.hooks[:5]:
+                    sys.stdout.write(f"  * {h.hook_type.value}: {h.target_module} ({h.hook_pattern}) - Conf: {h.confidence*100:.0f}%\n")
+            if jit_res.captured_methods:
+                sys.stdout.write(f"\n--- [Captured CIL Methods: {len(jit_res.captured_methods)}] ---\n")
+                for cm in jit_res.captured_methods[:6]:
+                    sys.stdout.write(f"  [0x{cm.token:08X} @ {hex(cm.rva)}] {cm.name}: {cm.il_size}b ({cm.header_format}) - {cm.state.value}\n")
+            if args.jit_out:
+                exp_jit = JITTracerEngine.export_to_directory(jit_res, output_dir=args.jit_out)
+                sys.stdout.write(f"[+] Exported {len(exp_jit['exported_files'])} JIT capture files to -> {args.jit_out}\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] JIT compilation tracing failed: {e}\n")
 
     if args.format == "json":
         sys.stdout.write(json.dumps(report, indent=2) + "\n")

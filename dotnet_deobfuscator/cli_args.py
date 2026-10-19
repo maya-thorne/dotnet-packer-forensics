@@ -476,6 +476,37 @@ def build_parser() -> argparse.ArgumentParser:
         "--diff-json",
         help="Dedicated file path to export JSON diff summary",
     )
+    # JIT Compilation Tracing & Bytecode Capture Harness
+    parser.add_argument(
+        "--jit-trace",
+        action="store_true",
+        help="Enable CLR JIT compilation tracing and bytecode capture emulation",
+    )
+    parser.add_argument(
+        "--jit-trace-log",
+        help="Path to external JIT trace file (JSON, CSV, JITD, or debugger text log) for offline capture",
+    )
+    parser.add_argument(
+        "--jit-out",
+        help="Directory to export captured CIL methods, disassembly listing, and reconstructed PE",
+    )
+    parser.add_argument(
+        "--jit-max-methods",
+        type=int,
+        default=100,
+        help="Maximum number of methods to emulate and capture (default: 100)",
+    )
+    parser.add_argument(
+        "--jit-tier",
+        choices=["minopt", "quickjit", "optimized"],
+        default="minopt",
+        help="Target JIT optimization tier for emulation (default: 'minopt')",
+    )
+    parser.add_argument(
+        "--jit-restore-pe",
+        action="store_true",
+        help="Reconstruct and export patched PE binary with captured CIL methods in .jitcapt section",
+    )
     parser.add_argument(
         "--format", choices=["text", "json"], default="text", help="Telemetry format (text or json)"
     )

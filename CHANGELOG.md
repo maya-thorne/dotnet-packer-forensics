@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.14.0] - 2026-10-19
+
+### Added
+- **CLR JIT Compilation Tracing & Bytecode Capture Harness (`dotnet_deobfuscator.jit_tracer`)**:
+  - Complete dynamic extraction and emulation architecture for .NET obfuscators utilizing native CLR runtime JIT hooks (`ICorJitCompiler::compileMethod`):
+    - Data models and enums (`models.py`): `JITHookType` (NONE, CLR_EXPORT_HOOK, VTABLE_SLOT_DETOUR, INLINE_TRAMPOLINE, RUNTIME_EXCEPTION_FILTER, METADATA_TOKEN_MUTATOR), `JITExecutionState` (PENDING, TRACED, EMULATED, VALIDATED, DECRYPTED, RESTORED, CORRUPTED), `CaptureSource` (VIRTUAL_EMULATOR, MEMORY_INSPECTION, TRACE_LOG, HYPERVISOR_PROBE), `OptimizationTier` (TIER0, TIER1_OPTIMIZED, QUICK_JIT, MIN_OPTS), `CipherFamily` (NONE, LCG_XOR, ROTATING_XOR, CUSTOM_PRNG), `CORINFO_METHOD_INFO`, `JITHookSignature`, `CapturedMethod`, `JITCaptureTelemetry`, `JITCaptureOptions`, and `JITCaptureResult`.
+    - Hardened security primitives: `safe_path` (strict directory traversal defenses with canonical path verification), `zeroize_buffer` (ctypes memory wiping), and `calculate_entropy`.
+  - CLR runtime JIT detour and hook detector (`JITHookDetector` in `hook_detector.py`):
+    - Scans PE import/export tables for CLR execution engine libraries (`clrjit.dll`, `mscorjit.dll`) and exported functions (`getJit`, `compileMethod`).
+    - Identifies known protector detour signatures (ConfuserEx AntiTamper, .NET Reactor NecroBit, ILProtector, ArmDot, Eazfuscator).
+    - Detects 64-bit indirect jumps (`FF 25`), `mov-push-ret` detours, inline hook trampolines, and VTable slot 0 pointer overwrites.
+  - Virtual JIT execution and compileMethod emulator (`VirtualJITCompiler` in `emulator.py`):
+    - Emulates `ICorJitCompiler::compileMethod` execution environment and CorILMethod Tiny/Fat header decoding.
+    - Opcode verification and method integrity checking against ECMA-335 standards.
+    - Integrated LCG PRNG and XOR stream cipher decryptor with automatic buffer zeroization.
+    - Disassembly preview generation for captured bytecode.
+  - Multi-format JIT trace log parser (`JITTraceParser` in `trace_parser.py`):
+    - Ingests structured JSON manifests, CSV trace exports, proprietary binary `JITD` stream captures, and text/debugger log files via regex parsing.
+  - Assembly and CIL bytecode restorer (`JITAssemblyRestorer` in `assembly_restorer.py`):
+    - Injects recovered methods into existing PE binaries via a dedicated `.jitcapt` section.
+    - Synthesizes compliant minimal PE32 wrapper containers around orphaned JIT captures.
+    - Generates clean CIL disassembly listings with method tokens and metadata annotations.
+  - High-level orchestrator facade (`JITTracerEngine` in `analyzer.py`) and safe export pipelines:
+    - Composite static and emulation analysis via `analyze_bytes()` and `analyze_file()`.
+    - Multi-format safe directory exporter creating `summary.json`, `captured_methods.json`, `disassembly.il`, and optional restored PE assemblies (`restored_assembly.exe`).
+    - Integrated with core engine APIs: `DotNetPackerCore.trace_jit_compilation()` and `DotNetPackerCore.export_jit_trace()`.
+- **CLI Toolchain Integration**:
+  - Added `--jit-trace` option for analyzing JIT compilation hooks and tracing method bytecode.
+  - Added `--jit-trace-log <FILE>` option for ingesting external JIT trace logs (JSON, CSV, JITD, text).
+  - Added `--jit-out <DIR>` option for exporting JIT trace summaries, captured CIL, disassembly, and restored PE binaries.
+  - Added `--jit-max-methods <N>` option for bounding captured method count (default: 500).
+  - Added `--jit-tier {tier0,tier1,quick_jit,min_opts,all}` option (default: `all`).
+  - Added `--jit-restore-pe` flag for synthesizing a reconstructed PE32 assembly containing captured bytecode.
+- **Comprehensive Unit & Integration Test Suite (`tests/test_jit_tracer.py`)**:
+  - 19 dedicated unit and integration tests covering data models, directory traversal sanitization, buffer zeroization, JIT hook detection, virtual JIT compilation and decryption, trace log parsers, assembly restoration, PE section injection, orchestrator analysis, export directories, and CLI execution (expanding total test suite to 475 passing tests).
+
 ## [2.13.0] - 2026-10-18
 
 ### Added
