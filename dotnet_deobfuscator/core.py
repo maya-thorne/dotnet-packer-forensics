@@ -27,6 +27,7 @@ from .native_aot import NativeAOTAnalysisResult, NativeAOTAnalyzer
 from .dump_carver import DumpCarverResult, KernelDumpCarver
 from .decompiler_bridge import DecompilerBridgeEngine, DecompilerBridgeOptions, DecompilerBridgeResult, DecompilerEngine
 from .diffing import BinaryDiffEngine, BinaryDiffOptions, BinaryDiffResult
+from .jit_tracer import JITCaptureOptions, JITCaptureResult, JITTracerEngine
 from .unpacker_dispatcher import unpack_payload_to_file, unpack_all_to_dir
 from .unpackers.armdot import ArmDotOpcodeTable, ArmDotUnpacker, ArmDotVMDisassembler
 from .unpackers.babel import BabelUnpacker
@@ -144,6 +145,12 @@ class DotNetPackerCore:
         decompiler_bridge_res = DecompilerBridgeEngine.analyze(data, file_name=file_name)
         decompiler_bridge_telemetry = decompiler_bridge_res.telemetry.to_dict()
 
+        # 24. JIT Compilation Tracing & Bytecode Capture Harness
+        jit_tracer_res = JITTracerEngine.analyze_bytes(data, file_name=file_name)
+        jit_tracer_telemetry = jit_tracer_res.telemetry.to_dict()
+        jit_tracer_telemetry["is_hooked"] = jit_tracer_res.is_hooked
+        jit_tracer_telemetry["primary_protector"] = jit_tracer_res.primary_protector
+
         return build_analysis_report(
             file_path=file_name, file_size=file_size, elapsed_ms=elapsed_ms, hashes=hashes,
             assembly_info=assembly_info, detected_protectors=detected_protectors, pe_diag=pe_diag,
@@ -161,19 +168,27 @@ class DotNetPackerCore:
             cfg_telemetry=cfg_telemetry, baml_telemetry=baml_telemetry,
             native_aot_telemetry=native_aot_telemetry, dump_carver_telemetry=dump_carver_telemetry,
             decompiler_bridge_telemetry=decompiler_bridge_telemetry,
+            jit_tracer_telemetry=jit_tracer_telemetry,
         )
 
+
+    @staticmethod
+    def _read_bytes(path: str) -> bytes:
+        with open(path, "rb") as f:
+            return f.read()
+
+    @staticmethod
+    def _write_bytes(path: str, data: bytes) -> None:
+        with open(path, "wb") as f:
+            f.write(data)
 
     @classmethod
     def rebuild_pe(
         cls, input_path: str, output_path: str, options: Optional[PERebuildOptions] = None
     ) -> PERebuildReport:
         """Rebuilds and repairs damaged PE headers and sections, saving output to file."""
-        with open(input_path, "rb") as f:
-            data = f.read()
-        rebuilt_bytes, report = PERebuilder.rebuild(data, options=options)
-        with open(output_path, "wb") as f:
-            f.write(rebuilt_bytes)
+        rebuilt_bytes, report = PERebuilder.rebuild(cls._read_bytes(input_path), options=options)
+        cls._write_bytes(output_path, rebuilt_bytes)
         return report
 
     @classmethod
@@ -188,47 +203,34 @@ class DotNetPackerCore:
         cls, input_path: str, output_path: str, master_key: str = "randomkey"
     ) -> bool:
         """Extracts and writes decrypted payload to disk across all supported protector types."""
-        with open(input_path, "rb") as f:
-            data = f.read()
-        return unpack_payload_to_file(data, output_path=output_path, master_key=master_key)
+        return unpack_payload_to_file(cls._read_bytes(input_path), output_path=output_path, master_key=master_key)
 
     @classmethod
     def unpack_to_dir(cls, input_path: str, output_dir: str) -> List[Dict[str, any]]:
         """Extracts all embedded Costura, ConfuserEx, .NET Reactor, Eazfuscator, Babel, ArmDot, DeepSea, AntiTamper, and AntiDump assemblies into target directory."""
-        with open(input_path, "rb") as f:
-            data = f.read()
-        return unpack_all_to_dir(data, output_dir=output_dir)
-
+        return unpack_all_to_dir(cls._read_bytes(input_path), output_dir=output_dir)
 
     @classmethod
     def demangle_babel(
         cls, input_path: str, output_path: Optional[str] = None, custom_map: Optional[Union[Dict[str, str], str]] = None
     ) -> Tuple[bytes, Dict[str, any]]:
         """Demangles Babel Obfuscator symbols and reconstructs cross-assembly dependency graph."""
-        with open(input_path, "rb") as f:
-            data = f.read()
-        demangled_pe, rep = BabelUnpacker.demangle_assembly(data, custom_map=custom_map)
+        demangled_pe, rep = BabelUnpacker.demangle_assembly(cls._read_bytes(input_path), custom_map=custom_map)
         if output_path and rep.get("success"):
-            with open(output_path, "wb") as f:
-                f.write(demangled_pe)
+            cls._write_bytes(output_path, demangled_pe)
         return demangled_pe, rep
 
     @classmethod
     def extract_babel_assemblies(cls, input_path: str) -> List[Dict[str, any]]:
         """Carves all merged satellite assemblies embedded within Babel binary."""
-        with open(input_path, "rb") as f:
-            data = f.read()
-        return BabelUnpacker.extract_merged_assemblies(data)
+        return BabelUnpacker.extract_merged_assemblies(cls._read_bytes(input_path))
 
     @classmethod
     def strip_reactor_envelope(cls, input_path: str, output_path: str) -> bool:
         """Strips native wrapper envelope and writes carved managed .NET assembly to file."""
-        with open(input_path, "rb") as f:
-            data = f.read()
-        stripped_pe, rep = DotNetReactorUnpacker.strip_native_envelope(data)
+        stripped_pe, rep = DotNetReactorUnpacker.strip_native_envelope(cls._read_bytes(input_path))
         if stripped_pe and rep.get("is_valid_managed_pe"):
-            with open(output_path, "wb") as f:
-                f.write(stripped_pe)
+            cls._write_bytes(output_path, stripped_pe)
             return True
         return False
 
@@ -237,12 +239,9 @@ class DotNetPackerCore:
         cls, input_path: str, output_path: str, seed: int = 0x14725836
     ) -> Dict[str, any]:
         """Restores encrypted NecroBit CIL method bodies and writes patched assembly to file."""
-        with open(input_path, "rb") as f:
-            data = f.read()
-        restored_pe, rep = DotNetReactorUnpacker.restore_necrobit_assembly(data, seed=seed)
+        restored_pe, rep = DotNetReactorUnpacker.restore_necrobit_assembly(cls._read_bytes(input_path), seed=seed)
         if rep.get("success") or rep.get("methods_restored_count", 0) > 0:
-            with open(output_path, "wb") as f:
-                f.write(restored_pe)
+            cls._write_bytes(output_path, restored_pe)
         return rep
 
     @classmethod
@@ -250,12 +249,9 @@ class DotNetPackerCore:
         cls, input_path: str, output_path: Optional[str] = None, custom_table: Optional[VMOpcodeTable] = None
     ) -> Tuple[bytes, Dict[str, any]]:
         """De-virtualizes Eazfuscator.NET virtual machine methods and optionally writes restored PE to file."""
-        with open(input_path, "rb") as f:
-            data = f.read()
-        rebuilt_pe, rep = EazfuscatorUnpacker.devirtualize_assembly(data, custom_table=custom_table)
+        rebuilt_pe, rep = EazfuscatorUnpacker.devirtualize_assembly(cls._read_bytes(input_path), custom_table=custom_table)
         if output_path and (rep.get("success") or rep.get("methods_devirtualized_count", 0) > 0):
-            with open(output_path, "wb") as f:
-                f.write(rebuilt_pe)
+            cls._write_bytes(output_path, rebuilt_pe)
         return rebuilt_pe, rep
 
     @classmethod
@@ -263,8 +259,7 @@ class DotNetPackerCore:
         cls, input_path: str, custom_table: Optional[VMOpcodeTable] = None
     ) -> List[Dict[str, any]]:
         """Disassembles all embedded Eazfuscator VM method containers to formatted assembly."""
-        with open(input_path, "rb") as f:
-            data = f.read()
+        data = cls._read_bytes(input_path)
         disasm = EazfuscatorVMDisassembler(opcode_table=custom_table or VMOpcodeTable())
         return [
             {"token": m["token_hex"], "instruction_count": len(ins), "disassembly": "\n".join(i.format() for i in ins)}
@@ -277,12 +272,9 @@ class DotNetPackerCore:
         cls, input_path: str, output_path: Optional[str] = None, custom_table: Optional[ArmDotOpcodeTable] = None
     ) -> Tuple[bytes, Dict[str, any]]:
         """De-virtualizes ArmDot virtual machine methods and optionally writes restored PE to file."""
-        with open(input_path, "rb") as f:
-            data = f.read()
-        rebuilt_pe, rep = ArmDotUnpacker.devirtualize_assembly(data, custom_table=custom_table)
+        rebuilt_pe, rep = ArmDotUnpacker.devirtualize_assembly(cls._read_bytes(input_path), custom_table=custom_table)
         if output_path and (rep.get("success") or rep.get("methods_devirtualized_count", 0) > 0):
-            with open(output_path, "wb") as f:
-                f.write(rebuilt_pe)
+            cls._write_bytes(output_path, rebuilt_pe)
         return rebuilt_pe, rep
 
     @classmethod
@@ -290,8 +282,7 @@ class DotNetPackerCore:
         cls, input_path: str, custom_table: Optional[ArmDotOpcodeTable] = None
     ) -> List[Dict[str, any]]:
         """Disassembles all embedded ArmDot VM method containers to formatted assembly."""
-        with open(input_path, "rb") as f:
-            data = f.read()
+        data = cls._read_bytes(input_path)
         disasm = ArmDotVMDisassembler(opcode_table=custom_table or ArmDotOpcodeTable())
         return [
             {"token": m["token_hex"], "instruction_count": len(ins), "disassembly": "\n".join(i.format() for i in ins)}
@@ -302,9 +293,7 @@ class DotNetPackerCore:
     @classmethod
     def extract_armdot_containers(cls, input_path: str) -> List[Dict[str, any]]:
         """Carves all ArmDot virtual machine method containers embedded in the binary."""
-        with open(input_path, "rb") as f:
-            data = f.read()
-        return ArmDotUnpacker.extract_vm_containers(data)
+        return ArmDotUnpacker.extract_vm_containers(cls._read_bytes(input_path))
 
     @classmethod
     def _extract_confuser_strings(cls, data: bytes) -> List[str]:
@@ -368,13 +357,10 @@ class DotNetPackerCore:
         cls, input_path: str, output_path: str, master_seed: int = 0x14725836
     ) -> Dict[str, Any]:
         """Neutralizes IntelliLock license envelope, restoring clean assembly."""
-        with open(input_path, "rb") as f:
-            data = f.read()
         unlocked_bin, meta, lic = IntelliLockUnpacker.neutralize_license_envelope(
-            data, master_seed=master_seed
+            cls._read_bytes(input_path), master_seed=master_seed
         )
-        with open(output_path, "wb") as f:
-            f.write(unlocked_bin)
+        cls._write_bytes(output_path, unlocked_bin)
         return {
             "unlocked_file": output_path, "size_bytes": len(unlocked_bin),
             "metadata": meta.to_dict(), "license": lic.to_dict(),
@@ -390,21 +376,16 @@ class DotNetPackerCore:
         cls, input_path: str, output_dir: str, master_seed: int = 0x14725836
     ) -> Dict[str, Any]:
         """Unpacks neutralized binary, synthetic license, and manifest to directory."""
-        with open(input_path, "rb") as f:
-            data = f.read()
-        return IntelliLockUnpacker.unpack_to_directory(data, output_dir=output_dir, master_seed=master_seed)
+        return IntelliLockUnpacker.unpack_to_directory(cls._read_bytes(input_path), output_dir=output_dir, master_seed=master_seed)
 
     @classmethod
     def deflatten_deepsea(
         cls, input_path: str, output_path: Optional[str] = None
     ) -> Tuple[bytes, Dict[str, Any]]:
         """De-flattens DeepSea obfuscated assembly and writes output PE if specified."""
-        with open(input_path, "rb") as f:
-            data = f.read()
-        rebuilt_pe, rep = DeepSeaUnpacker.deflatten_assembly(data)
+        rebuilt_pe, rep = DeepSeaUnpacker.deflatten_assembly(cls._read_bytes(input_path))
         if output_path:
-            with open(output_path, "wb") as f:
-                f.write(rebuilt_pe)
+            cls._write_bytes(output_path, rebuilt_pe)
         return rebuilt_pe, rep
 
     @classmethod
@@ -415,8 +396,7 @@ class DotNetPackerCore:
     @classmethod
     def unpack_deepsea_dir(cls, input_path: str, output_dir: str) -> Dict[str, Any]:
         """Unpacks de-flattened binary, AST JSON, and CFG diagrams to directory."""
-        with open(input_path, "rb") as f:
-            return DeepSeaUnpacker.unpack_to_directory(f.read(), output_dir=output_dir)
+        return DeepSeaUnpacker.unpack_to_directory(cls._read_bytes(input_path), output_dir=output_dir)
 
     @classmethod
     def restore_antitamper(
@@ -424,8 +404,7 @@ class DotNetPackerCore:
         jit_dump_path: Optional[str] = None, master_seed: int = 0x5A5A5A5A,
     ) -> Tuple[bytes, Dict[str, Any]]:
         """Restores anti-tampered assembly, repairing CIL method bodies."""
-        with open(input_path, "rb") as f:
-            data = f.read()
+        data = cls._read_bytes(input_path)
         jit_records = None
         if jit_dump_path and os.path.exists(jit_dump_path):
             with open(jit_dump_path, "r", encoding="utf-8") as f:
@@ -435,8 +414,7 @@ class DotNetPackerCore:
         )
         rebuilt_pe, rep = AntiTamperUnpacker.restore_assembly(data, restored)
         if output_path:
-            with open(output_path, "wb") as f:
-                f.write(rebuilt_pe)
+            cls._write_bytes(output_path, rebuilt_pe)
         return rebuilt_pe, rep
 
     @classmethod
@@ -445,57 +423,47 @@ class DotNetPackerCore:
         jit_dump_path: Optional[str] = None, master_seed: int = 0x5A5A5A5A,
     ) -> Dict[str, Any]:
         """Unpacks anti-tampered binary, dumped methods, and CIL files to directory."""
-        with open(input_path, "rb") as f:
-            return AntiTamperUnpacker.unpack_to_directory(
-                f.read(), output_dir=output_dir, jit_dump_file=jit_dump_path, master_seed=master_seed
-            )
+        return AntiTamperUnpacker.unpack_to_directory(
+            cls._read_bytes(input_path), output_dir=output_dir, jit_dump_file=jit_dump_path, master_seed=master_seed
+        )
 
     @classmethod
     def heal_anti_dump(
         cls, input_path: str, output_path: Optional[str] = None, options: Optional[AntiDumpHealOptions] = None,
     ) -> Tuple[bytes, Dict[str, Any]]:
         """Heals anti-dump memory corruptions, reconstructing PE headers and CLR metadata."""
-        with open(input_path, "rb") as f:
-            data = f.read()
-        healed_pe, rep = AntiDumpUnpacker.heal_dump(data, options=options)
+        healed_pe, rep = AntiDumpUnpacker.heal_dump(cls._read_bytes(input_path), options=options)
         if output_path and rep.get("is_healed"):
-            with open(output_path, "wb") as f:
-                f.write(healed_pe)
+            cls._write_bytes(output_path, healed_pe)
         return healed_pe, rep
 
     @classmethod
     def detect_anti_dump(cls, input_path: str) -> Dict[str, Any]:
         """Detects anti-dump memory corruptions and dump layout characteristics."""
-        with open(input_path, "rb") as f:
-            return AntiDumpUnpacker.detect(f.read())
+        return AntiDumpUnpacker.detect(cls._read_bytes(input_path))
 
     @classmethod
     def unpack_anti_dump_dir(
         cls, input_path: str, output_dir: str, options: Optional[AntiDumpHealOptions] = None,
     ) -> Dict[str, Any]:
         """Heals dump and exports normalized binary, carved sections, and telemetry to directory."""
-        with open(input_path, "rb") as f:
-            return AntiDumpUnpacker.unpack_to_directory(f.read(), output_dir=output_dir, options=options)
+        return AntiDumpUnpacker.unpack_to_directory(cls._read_bytes(input_path), output_dir=output_dir, options=options)
 
     @classmethod
     def demux_native(cls, input_path: str) -> Dict[str, Any]:
         """Scans and demuxes embedded multi-architecture native binaries."""
-        with open(input_path, "rb") as f:
-            data = f.read()
-        telemetry, payloads = NativeDemuxerUnpacker.demux(data)
+        telemetry, payloads = NativeDemuxerUnpacker.demux(cls._read_bytes(input_path))
         return {"telemetry": telemetry.to_dict(), "payloads": [p.to_dict() for p in payloads]}
 
     @classmethod
     def route_native(cls, input_path: str, target_os: str = "windows", target_arch: str = "x64") -> Dict[str, Any]:
         """Simulates dynamic loader routing and platform resolution for given OS and architecture."""
-        with open(input_path, "rb") as f:
-            return NativeDemuxerUnpacker.route(f.read(), target_os=target_os, target_arch=target_arch)
+        return NativeDemuxerUnpacker.route(cls._read_bytes(input_path), target_os=target_os, target_arch=target_arch)
 
     @classmethod
     def unpack_native_dir(cls, input_path: str, output_dir: str, target_arch: Optional[str] = None) -> Dict[str, Any]:
         """Demuxes native multi-architecture binaries and exports to architecture-organized directory."""
-        with open(input_path, "rb") as f:
-            return NativeDemuxerUnpacker.unpack_to_directory(f.read(), output_dir=output_dir, target_arch=target_arch)
+        return NativeDemuxerUnpacker.unpack_to_directory(cls._read_bytes(input_path), output_dir=output_dir, target_arch=target_arch)
 
     @classmethod
     def generate_threat_rules(
@@ -693,3 +661,18 @@ class DotNetPackerCore:
     ) -> Dict[str, Any]:
         """Exports unified diff summary, method CSV, textual diff, and HTML dashboard."""
         return BinaryDiffEngine.export_to_directory(result, output_dir=output_dir)
+
+    @classmethod
+    def trace_jit_compilation(
+        cls, input_path: str, options: Optional[JITCaptureOptions] = None
+    ) -> JITCaptureResult:
+        """Traces JIT compilation hooks, emulates bytecode capture, and reconstructs methods."""
+        return JITTracerEngine.analyze_file(input_path, options=options)
+
+    @classmethod
+    def export_jit_trace(
+        cls, input_path: str, output_dir: str, options: Optional[JITCaptureOptions] = None
+    ) -> Dict[str, Any]:
+        """Traces JIT compilation, captures methods, and exports artifacts to directory."""
+        res = cls.trace_jit_compilation(input_path, options=options)
+        return JITTracerEngine.export_to_directory(res, output_dir=output_dir)

@@ -44,6 +44,7 @@ def build_analysis_report(
     native_aot_telemetry: Optional[Dict[str, Any]] = None,
     dump_carver_telemetry: Optional[Dict[str, Any]] = None,
     decompiler_bridge_telemetry: Optional[Dict[str, Any]] = None,
+    jit_tracer_telemetry: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Assembles all subsystem forensic findings into a unified analysis report dictionary."""
     return {
@@ -315,5 +316,16 @@ def build_analysis_report(
             "sources_count": 0,
             "anomaly_blocks_count": 0,
             "rhp_helpers_count": 0,
+        },
+        "jit_tracer": jit_tracer_telemetry or {
+            "methods_traced": 0,
+            "methods_captured": 0,
+            "methods_validated": 0,
+            "total_bytes_captured": 0,
+            "hooks_detected": 0,
+            "duration_ms": 0.0,
+            "average_entropy": 0.0,
+            "is_hooked": False,
+            "primary_protector": None,
         },
     }

@@ -203,10 +203,16 @@ python -m dotnet_deobfuscator --diff original.exe --diff-against packed.exe --di
 | `--diff-threshold` | Similarity alerting threshold [0.0 - 1.0] for divergence reporting | `0.8` |
 | `--diff-html` | Output file path for standalone offline interactive HTML diff dashboard | None |
 | `--diff-json` | Output structured diff telemetry in JSON format to stdout | `False` |
+| `--jit-trace` | Analyze CLR runtime JIT compilation hooks and trace method bytecode | `False` |
+| `--jit-trace-log` | Path to external JIT trace log file (JSON, CSV, JITD stream, or debugger log) | None |
+| `--jit-out` | Directory path to export JIT trace summary, captured methods, and disassembly | None |
+| `--jit-max-methods` | Maximum number of JIT methods to trace and capture | `500` |
+| `--jit-tier` | Target JIT compilation optimization tier (`tier0`, `tier1`, `quick_jit`, `min_opts`, `all`) | `all` |
+| `--jit-restore-pe` | Reconstruct and synthesize a standalone PE32 assembly containing captured JIT bytecode | `False` |
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v2.13.0` |
+| `--version` | Display engine version and exit | `v2.14.0` |
 
 
 </details>
@@ -651,6 +657,36 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><b>Binary Diff Engine Facade</b></td>
       <td>Pairs assembly methods, computes composite weighted similarity, classifies obfuscation impact, formats text diffs, and manages directory exports.</td>
     </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/jit_tracer/models.py</code></td>
+      <td><b>JIT Tracer Models &amp; Enums</b></td>
+      <td>Encapsulates JITHookType, JITExecutionState, CaptureSource, OptimizationTier, CipherFamily, and telemetry models.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/jit_tracer/hook_detector.py</code></td>
+      <td><b>CLR JIT Hook Detector</b></td>
+      <td>Scans clrjit/mscorjit exports and imports, identifies detour patterns (indirect jumps, trampolines), and flags protector hooks.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/jit_tracer/emulator.py</code></td>
+      <td><b>Virtual JIT Compiler Emulator</b></td>
+      <td>Emulates ICorJitCompiler::compileMethod, decodes CorILMethod Tiny/Fat headers, validates opcodes, and inverts LCG/XOR ciphers.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/jit_tracer/trace_parser.py</code></td>
+      <td><b>Multi-Format JIT Trace Parser</b></td>
+      <td>Ingests structured JSON, CSV, proprietary binary JITD streams, and text debugger log traces.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/jit_tracer/assembly_restorer.py</code></td>
+      <td><b>JIT Assembly Restorer</b></td>
+      <td>Injects recovered CIL methods into PE .jitcapt section, synthesizes minimal PE32 wrappers, and generates CIL disassembly.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/jit_tracer/analyzer.py</code></td>
+      <td><b>JIT Tracer Engine Facade</b></td>
+      <td>Coordinates static PE inspection, virtual emulation, trace log ingestion, bytecode recovery, and safe directory exports.</td>
+    </tr>
   </tbody>
 </table>
 
@@ -805,6 +841,11 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>tests/test_binary_diffing.py</code></td>
       <td><b>Binary Diffing &amp; AST Flow Test</b></td>
       <td>Validates PE structural differ, CIL opcode sequence alignment, CFG topology comparison, AST flow matching, HTML report escaping, directory exports, and CLI flags.</td>
+    </tr>
+    <tr>
+      <td><code>tests/test_jit_tracer.py</code></td>
+      <td><b>CLR JIT Tracer &amp; Bytecode Capture Test</b></td>
+      <td>Validates JIT hook detector, virtual JIT compiler emulation, LCG/XOR decryption, trace log parsers, PE assembly restorer, directory exports, and CLI flags.</td>
     </tr>
   </tbody>
 </table>

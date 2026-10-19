@@ -271,8 +271,26 @@ from .diffing import (
     SectionDiff,
     calculate_entropy,
 )
+from .jit_tracer import (
+    CapturedMethod,
+    CaptureSource,
+    CipherFamily,
+    CORINFO_METHOD_INFO,
+    JITAssemblyRestorer,
+    JITCaptureOptions,
+    JITCaptureResult,
+    JITCaptureTelemetry,
+    JITExecutionState,
+    JITHookDetector,
+    JITHookSignature,
+    JITHookType,
+    JITTraceParser,
+    JITTracerEngine,
+    OptimizationTier,
+    VirtualJITCompiler,
+)
 
-__version__ = "2.13.0"
+__version__ = "2.14.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -504,6 +522,22 @@ __all__ = [
     "MethodDiff",
     "ObfuscationImpact",
     "SectionDiff",
+    "JITTracerEngine",
+    "JITAssemblyRestorer",
+    "VirtualJITCompiler",
+    "JITHookDetector",
+    "JITTraceParser",
+    "CapturedMethod",
+    "CaptureSource",
+    "CipherFamily",
+    "CORINFO_METHOD_INFO",
+    "JITCaptureOptions",
+    "JITCaptureResult",
+    "JITCaptureTelemetry",
+    "JITExecutionState",
+    "JITHookSignature",
+    "JITHookType",
+    "OptimizationTier",
     "__version__",
 ]
 

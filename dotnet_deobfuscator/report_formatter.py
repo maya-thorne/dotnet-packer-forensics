@@ -394,6 +394,19 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
         if db.get("anomaly_blocks_count", 0) > 0:
             lines.append(f"      Anomaly Blocks     : {db.get('anomaly_blocks_count', 0)} high-entropy blocks")
 
+    jt = report.get("jit_tracer", {})
+    if jt.get("is_hooked") or jt.get("methods_captured", 0) > 0 or jt.get("hooks_detected", 0) > 0:
+        lines.append("")
+        lines.append("--- [JIT Compilation Tracing & Bytecode Capture Harness] ---")
+        lines.append(f"  [+] Active JIT Hooks   : {jt.get('hooks_detected', 0)} detected (Hooked: {'YES' if jt.get('is_hooked') else 'NO'})")
+        if jt.get("primary_protector"):
+            lines.append(f"      Target Protector   : {jt['primary_protector']}")
+        lines.append(
+            f"      Methods Traced     : {jt.get('methods_traced', 0)} ({jt.get('methods_validated', 0)} validated, {jt.get('total_bytes_captured', 0)} bytes recovered)"
+        )
+        if jt.get("average_entropy", 0.0) > 0.0:
+            lines.append(f"      Average Entropy    : {jt['average_entropy']:.4f} / 8.000")
+
     if verbose and report.get("sections"):
         lines.append("")
         lines.append("--- [Section Topology & Entropy] ---")
