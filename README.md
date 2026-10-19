@@ -209,10 +209,15 @@ python -m dotnet_deobfuscator --diff original.exe --diff-against packed.exe --di
 | `--jit-max-methods` | Maximum number of JIT methods to trace and capture | `500` |
 | `--jit-tier` | Target JIT compilation optimization tier (`tier0`, `tier1`, `quick_jit`, `min_opts`, `all`) | `all` |
 | `--jit-restore-pe` | Reconstruct and synthesize a standalone PE32 assembly containing captured JIT bytecode | `False` |
+| `--bundle`, `--unbundle` | Extract and unbundle embedded assemblies and resources from .NET Single-File Host (AppHost) | `False` |
+| `--bundle-out` | Directory path to carve and export unbundled single-file assemblies and manifest | None |
+| `--bundle-filter` | Filter subset of bundled files to extract (`all`, `assemblies`, `native`, `symbols`, `configs`) | `all` |
+| `--bundle-mount` | Mount single-file host and display virtual volume filesystem directory tree | `False` |
+| `--bundle-no-decompress` | Skip decompressing compressed bundle payload streams | `False` |
 | `-k, --key` | Master XOR key for overlay decryption | `'randomkey'` |
 | `--format` | Output telemetry format (`text` or `json`) | `text` |
 | `-v, --verbose` | Verbose section topology and entropy metrics | `False` |
-| `--version` | Display engine version and exit | `v2.14.0` |
+| `--version` | Display engine version and exit | `v2.15.0` |
 
 
 </details>
@@ -686,6 +691,36 @@ The project is structured into three modular tiers: the zero-dependency Python f
       <td><code>dotnet_deobfuscator/jit_tracer/analyzer.py</code></td>
       <td><b>JIT Tracer Engine Facade</b></td>
       <td>Coordinates static PE inspection, virtual emulation, trace log ingestion, bytecode recovery, and safe directory exports.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/bundle/models.py</code></td>
+      <td><b>Single-File Bundle Data Models</b></td>
+      <td>Defines BundleFileType, BundleVersion, CompressionKind, SuperPackerKind, BundleEntry, and safe path traversal defenses.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/bundle/marker_scanner.py</code></td>
+      <td><b>Bundle Marker &amp; Superpacker Scanner</b></td>
+      <td>Locates 32-byte Microsoft BundleMarker, resolves 64-bit header offsets, and identifies Warp, BoxedApp, Enigma signatures.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/bundle/header_parser.py</code></td>
+      <td><b>BundleHeader Parser &amp; Serializer</b></td>
+      <td>Decodes BundleHeader v1, v2, v6 (.NET 6/7/8/9/10), 7-bit encoded integers (LEB128), and embedded manifest entries.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/bundle/decompressor.py</code></td>
+      <td><b>Stream Decompressor &amp; Buffer Zeroizer</b></td>
+      <td>Decompresses payload streams across raw Deflate, standard Zlib, Brotli, and LZMA with memory zeroizing.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/bundle/virtual_volume.py</code></td>
+      <td><b>Virtual Volume Mount &amp; Hierarchy</b></td>
+      <td>In-memory filesystem mounting, directory tree navigation, ASCII tree rendering, and category-based entry filtering.</td>
+    </tr>
+    <tr>
+      <td><code>dotnet_deobfuscator/bundle/unbundler.py</code></td>
+      <td><b>Single-File Bundle Engine Facade</b></td>
+      <td>Orchestrates bundle detection, virtual volume mounting, full payload carving, manifest generation, and directory export.</td>
     </tr>
   </tbody>
 </table>

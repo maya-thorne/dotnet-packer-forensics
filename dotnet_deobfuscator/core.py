@@ -28,6 +28,7 @@ from .dump_carver import DumpCarverResult, KernelDumpCarver
 from .decompiler_bridge import DecompilerBridgeEngine, DecompilerBridgeOptions, DecompilerBridgeResult, DecompilerEngine
 from .diffing import BinaryDiffEngine, BinaryDiffOptions, BinaryDiffResult
 from .jit_tracer import JITCaptureOptions, JITCaptureResult, JITTracerEngine
+from .bundle import BundleExtractionResult, BundleOptions, SingleFileBundleEngine, VirtualBundleVolume
 from .unpacker_dispatcher import unpack_payload_to_file, unpack_all_to_dir
 from .unpackers.armdot import ArmDotOpcodeTable, ArmDotUnpacker, ArmDotVMDisassembler
 from .unpackers.babel import BabelUnpacker
@@ -151,6 +152,9 @@ class DotNetPackerCore:
         jit_tracer_telemetry["is_hooked"] = jit_tracer_res.is_hooked
         jit_tracer_telemetry["primary_protector"] = jit_tracer_res.primary_protector
 
+        # 25. .NET Single-File Host (AppHost / Bundle) & Superpacker Forensics
+        bundle_detect = SingleFileBundleEngine.detect(data)
+
         return build_analysis_report(
             file_path=file_name, file_size=file_size, elapsed_ms=elapsed_ms, hashes=hashes,
             assembly_info=assembly_info, detected_protectors=detected_protectors, pe_diag=pe_diag,
@@ -169,8 +173,8 @@ class DotNetPackerCore:
             native_aot_telemetry=native_aot_telemetry, dump_carver_telemetry=dump_carver_telemetry,
             decompiler_bridge_telemetry=decompiler_bridge_telemetry,
             jit_tracer_telemetry=jit_tracer_telemetry,
+            bundle_telemetry=bundle_detect,
         )
-
 
     @staticmethod
     def _read_bytes(path: str) -> bytes:
@@ -183,25 +187,19 @@ class DotNetPackerCore:
             f.write(data)
 
     @classmethod
-    def rebuild_pe(
-        cls, input_path: str, output_path: str, options: Optional[PERebuildOptions] = None
-    ) -> PERebuildReport:
-        """Rebuilds and repairs damaged PE headers and sections, saving output to file."""
+    def rebuild_pe(cls, input_path: str, output_path: str, options: Optional[PERebuildOptions] = None) -> PERebuildReport:
+        """Rebuilds damaged PE headers and sections, saving output to file."""
         rebuilt_bytes, report = PERebuilder.rebuild(cls._read_bytes(input_path), options=options)
         cls._write_bytes(output_path, rebuilt_bytes)
         return report
 
     @classmethod
-    def rebuild_pe_buffer(
-        cls, data: bytes, options: Optional[PERebuildOptions] = None
-    ) -> Tuple[bytes, PERebuildReport]:
-        """Rebuilds and repairs damaged PE headers and sections from byte buffer."""
+    def rebuild_pe_buffer(cls, data: bytes, options: Optional[PERebuildOptions] = None) -> Tuple[bytes, PERebuildReport]:
+        """Rebuilds damaged PE headers and sections from byte buffer."""
         return PERebuilder.rebuild(data, options=options)
 
     @classmethod
-    def unpack_to_file(
-        cls, input_path: str, output_path: str, master_key: str = "randomkey"
-    ) -> bool:
+    def unpack_to_file(cls, input_path: str, output_path: str, master_key: str = "randomkey") -> bool:
         """Extracts and writes decrypted payload to disk across all supported protector types."""
         return unpack_payload_to_file(cls._read_bytes(input_path), output_path=output_path, master_key=master_key)
 
@@ -235,9 +233,7 @@ class DotNetPackerCore:
         return False
 
     @classmethod
-    def restore_necrobit(
-        cls, input_path: str, output_path: str, seed: int = 0x14725836
-    ) -> Dict[str, any]:
+    def restore_necrobit(cls, input_path: str, output_path: str, seed: int = 0x14725836) -> Dict[str, any]:
         """Restores encrypted NecroBit CIL method bodies and writes patched assembly to file."""
         restored_pe, rep = DotNetReactorUnpacker.restore_necrobit_assembly(cls._read_bytes(input_path), seed=seed)
         if rep.get("success") or rep.get("methods_restored_count", 0) > 0:
@@ -245,9 +241,7 @@ class DotNetPackerCore:
         return rep
 
     @classmethod
-    def devirtualize_eazfuscator(
-        cls, input_path: str, output_path: Optional[str] = None, custom_table: Optional[VMOpcodeTable] = None
-    ) -> Tuple[bytes, Dict[str, any]]:
+    def devirtualize_eazfuscator(cls, input_path: str, output_path: Optional[str] = None, custom_table: Optional[VMOpcodeTable] = None) -> Tuple[bytes, Dict[str, any]]:
         """De-virtualizes Eazfuscator.NET virtual machine methods and optionally writes restored PE to file."""
         rebuilt_pe, rep = EazfuscatorUnpacker.devirtualize_assembly(cls._read_bytes(input_path), custom_table=custom_table)
         if output_path and (rep.get("success") or rep.get("methods_devirtualized_count", 0) > 0):
@@ -676,3 +670,26 @@ class DotNetPackerCore:
         """Traces JIT compilation, captures methods, and exports artifacts to directory."""
         res = cls.trace_jit_compilation(input_path, options=options)
         return JITTracerEngine.export_to_directory(res, output_dir=output_dir)
+
+    @classmethod
+    def unbundle_file(
+        cls, input_path: str, options: Optional[BundleOptions] = None
+    ) -> BundleExtractionResult:
+        """Carves and unbundles embedded assemblies and artifacts from a .NET Single-File Host."""
+        return SingleFileBundleEngine.unbundle_file(input_path, options=options)
+
+    @classmethod
+    def export_bundle(
+        cls, input_path: str, output_dir: str, options: Optional[BundleOptions] = None
+    ) -> Dict[str, Any]:
+        """Carves single-file bundle artifacts and exports virtual volume manifest to directory."""
+        res = cls.unbundle_file(input_path, options=options)
+        return SingleFileBundleEngine.export_to_directory(res, output_dir=output_dir)
+
+    @classmethod
+    def mount_bundle_volume(cls, input_path: str) -> Optional[VirtualBundleVolume]:
+        """Mounts single-file binary as an in-memory virtual filesystem volume."""
+        with open(input_path, "rb") as f:
+            data = f.read()
+        return SingleFileBundleEngine.mount(data, file_name=os.path.basename(input_path))
+

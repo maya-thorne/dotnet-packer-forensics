@@ -407,6 +407,21 @@ def format_text_report(report: dict, verbose: bool = False) -> str:
         if jt.get("average_entropy", 0.0) > 0.0:
             lines.append(f"      Average Entropy    : {jt['average_entropy']:.4f} / 8.000")
 
+    bn = report.get("bundle", {})
+    if bn.get("is_bundle") or bn.get("packer_kind", "none") != "none":
+        lines.append("")
+        lines.append("--- [.NET Single-File Host (AppHost) & Bundle Forensics] ---")
+        lines.append(f"  [+] Host Architecture  : {bn.get('packer_kind', 'unknown').upper()} ({bn.get('version', 'unknown')})")
+        if bn.get("bundle_id"):
+            lines.append(f"      Bundle ID          : {bn['bundle_id']}")
+        lines.append(
+            f"      Embedded Files     : {bn.get('total_files', 0)} files ({bn.get('assembly_count', 0)} assemblies, {bn.get('native_count', 0)} native, {bn.get('pdb_count', 0)} PDBs)"
+        )
+        comp_str = "YES" if bn.get("has_compression") else "NO"
+        lines.append(
+            f"      Payload Volume     : {bn.get('total_uncompressed_bytes', 0):,} bytes (Compressed: {comp_str}, Ratio: {bn.get('overall_compression_ratio', 1.0):.2f}x)"
+        )
+
     if verbose and report.get("sections"):
         lines.append("")
         lines.append("--- [Section Topology & Entropy] ---")
