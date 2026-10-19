@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.15.0] - 2026-10-19
+
+### Added
+- **.NET Single-File Host (AppHost / Bundle) Extraction & Virtual Volume Carving Engine (`dotnet_deobfuscator.bundle`)**:
+  - Full forensic unbundling architecture for modern .NET single-file executables (.NET Core 3.1, .NET 5, .NET 6, .NET 7, .NET 8, .NET 9, and preview .NET 10):
+    - Data models and enums (`models.py`): `BundleFileType` (ASSEMBLY, NATIVE_BINARY, PDB_FILE, DEPS_JSON, RUNTIME_CONFIG_JSON, SYMBOLS, ICON, CONTENT, EXTRACT_TO_DISK, UNKNOWN), `BundleVersion` (V1_NETCORE3, V2_NET5, V6_NET6_PLUS, UNKNOWN), `CompressionKind` (NONE, DEFLATE, ZLIB, BROTLI, LZMA), `SuperPackerKind` (DOTNET_APPHOST, WARP, BOXEDAPP, ENIGMA, COSTURA, NONE), `BundleEntry`, `BundleHeader`, `BundleOptions`, `BundleTelemetry`, and `BundleExtractionResult`.
+    - Hardened security primitives: `safe_path` (strict directory traversal defenses with canonical path verification, ADS protection, and cross-drive escape prevention), `zeroize_buffer` (ctypes memory wiping), and `calculate_entropy`.
+  - Bundle identification and signature scanner (`BundleMarkerScanner` in `marker_scanner.py`):
+    - Locates the official 32-byte Microsoft `BundleMarker` GUID hash (`8B 12 02 9F 77 C4 D0 45 A2 7A D1 97 12 70 8F D3 C7 A5 D3 FC B9 DE DA 4C 9A 91 62 13 46 EE CF 84`).
+    - Resolves 64-bit header offsets across absolute file offsets, negative EOF-relative offsets, and marker-relative offsets.
+    - Scans for third-party superpacker signatures including Warp (`WARP_MAGIC`), BoxedApp (`.bxapp` section and magic), Enigma Virtual Box (`EVB`), and Costura embedded assemblies.
+  - Robust BundleHeader parser and serializer (`BundleHeaderParser` in `header_parser.py`):
+    - Complete support across BundleHeader v1 (.NET Core 3.x), v2 (.NET 5), and v6 (.NET 6/7/8/9/10).
+    - Variable-length 7-bit encoded integer (LEB128) and UTF-8 string codecs with bounds checking and resource exhaustion defenses.
+    - In v2 and v6+: parses `deps_json_offset`, `deps_json_size`, `runtime_config_json_offset`, `runtime_config_json_size`, and compression flags (`EnableCompressionInSingleFile`).
+    - File entry parser with per-file payload offset, uncompressed size, compressed size, and file type classification.
+  - Multi-algorithm stream decompressor (`BundleDecompressor` in `decompressor.py`):
+    - Decompresses payload streams across raw Deflate (`wbits=-15`), standard Zlib (`wbits=15`), Brotli, and LZMA.
+    - Enforces anti-decompression bomb safety threshold limits (512 MB ceiling) and zeroizes temporary memory buffers.
+  - In-memory virtual filesystem volume (`VirtualBundleVolume` in `virtual_volume.py`):
+    - In-memory mounting of bundled contents with directory hierarchy tree navigation and ASCII tree rendering (`render_tree()`).
+    - Querying and extraction by virtual path, category-based entry filtering (`assemblies`, `native`, `symbols`, `configs`), and SHA-256 / entropy calculation.
+  - High-level orchestrator facade (`SingleFileBundleEngine` in `unbundler.py`):
+    - Fast non-destructive inspection via `detect()`.
+    - Safe artifact export with path traversal defenses (`safe_path`) and automated `bundle_manifest.json` generation.
+    - Synthetic bundle generator for testing and round-trip verification.
+    - Integrated with core engine APIs: `DotNetPackerCore.unbundle_file()`, `DotNetPackerCore.export_bundle()`, and `DotNetPackerCore.mount_bundle_volume()`.
+- **CLI Toolchain Integration & Subcommand Modularization**:
+  - Added `--bundle` / `--unbundle` option to extract and carve embedded single-file assemblies.
+  - Added `--bundle-out <DIR>` to export extracted files and volume manifest.
+  - Added `--bundle-filter {all,assemblies,native,symbols,configs}` for targeted artifact recovery.
+  - Added `--bundle-mount` to display the virtual volume directory tree in the terminal.
+  - Added `--bundle-no-decompress` flag to preserve raw compressed streams if needed.
+  - Modularized standalone CLI execution modes (`dotnet_deobfuscator.cli_subcommands`) to reduce file complexity.
+- **Comprehensive Unit & Integration Test Suite (`tests/test_bundle_unpacker.py`)**:
+  - 12 dedicated unit and integration tests covering data models, path traversal defenses, memory zeroizing, 7-bit LEB128 integers, marker scanning, header parsing across v1/v2/v6, stream decompression, virtual volume mounting, directory export, core facade integration, and CLI arguments (expanding total test suite to 487 passing tests).
+
 ## [2.14.0] - 2026-10-19
 
 ### Added

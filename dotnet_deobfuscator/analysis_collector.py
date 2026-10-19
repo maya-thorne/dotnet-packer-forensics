@@ -45,6 +45,7 @@ def build_analysis_report(
     dump_carver_telemetry: Optional[Dict[str, Any]] = None,
     decompiler_bridge_telemetry: Optional[Dict[str, Any]] = None,
     jit_tracer_telemetry: Optional[Dict[str, Any]] = None,
+    bundle_telemetry: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Assembles all subsystem forensic findings into a unified analysis report dictionary."""
     return {
@@ -327,5 +328,21 @@ def build_analysis_report(
             "average_entropy": 0.0,
             "is_hooked": False,
             "primary_protector": None,
+        },
+        "bundle": bundle_telemetry or {
+            "is_bundle": False,
+            "packer_kind": "none",
+            "version": "unknown",
+            "bundle_id": "",
+            "total_files": 0,
+            "assembly_count": 0,
+            "native_count": 0,
+            "pdb_count": 0,
+            "config_count": 0,
+            "total_uncompressed_bytes": 0,
+            "total_compressed_bytes": 0,
+            "overall_compression_ratio": 1.0,
+            "has_compression": False,
+            "elapsed_ms": 0.0,
         },
     }

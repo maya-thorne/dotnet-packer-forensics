@@ -289,8 +289,26 @@ from .jit_tracer import (
     OptimizationTier,
     VirtualJITCompiler,
 )
+from .bundle import (
+    BundleDecompressor,
+    BundleEntry,
+    BundleExtractionResult,
+    BundleFileType,
+    BundleHeader,
+    BundleHeaderParser,
+    BundleMarkerScanner,
+    BundleOptions,
+    BundleTelemetry,
+    BundleVersion,
+    CompressionKind,
+    DOTNET_BUNDLE_MARKER,
+    SingleFileBundleEngine,
+    SuperPackerKind,
+    VirtualBundleVolume,
+    VirtualVolumeNode,
+)
 
-__version__ = "2.14.0"
+__version__ = "2.15.0"
 __author__ = "Maya Thorne"
 
 __all__ = [
@@ -538,6 +556,22 @@ __all__ = [
     "JITHookSignature",
     "JITHookType",
     "OptimizationTier",
+    "SingleFileBundleEngine",
+    "VirtualBundleVolume",
+    "VirtualVolumeNode",
+    "BundleMarkerScanner",
+    "BundleHeaderParser",
+    "BundleDecompressor",
+    "BundleEntry",
+    "BundleHeader",
+    "BundleOptions",
+    "BundleTelemetry",
+    "BundleExtractionResult",
+    "BundleFileType",
+    "BundleVersion",
+    "CompressionKind",
+    "SuperPackerKind",
+    "DOTNET_BUNDLE_MARKER",
     "__version__",
 ]
 

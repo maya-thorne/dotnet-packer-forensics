@@ -11,6 +11,7 @@ from typing import Optional
 
 from . import __version__
 from .cli_args import build_parser
+from .cli_subcommands import handle_batch_mode, handle_diff_mode, handle_fuzz_mode, handle_mutants_mode
 from .core import DotNetPackerCore
 from .payload_verifier import PayloadVerifier
 from .pe_rebuilder import PERebuildOptions
@@ -30,84 +31,11 @@ def main(argv: Optional[list] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    # Automated Regression Fuzzing Campaign Mode
-    if args.fuzz:
-        try:
-            targets = [t.strip() for t in args.fuzz_targets.split(",")] if args.fuzz_targets else None
-            fuzz_res = DotNetPackerCore.run_fuzzing_campaign(
-                target_path=args.target,
-                iterations=args.fuzz_iterations,
-                seed=args.fuzz_seed,
-                targets=targets,
-                timeout_sec=args.fuzz_timeout,
-                output_dir=args.fuzz_out,
-                is_64bit=args.fuzz_64,
-                isolate_process=args.fuzz_isolate,
-            )
-            if args.format == "json":
-                sys.stdout.write(json.dumps(fuzz_res.to_dict(), indent=2) + "\n")
-            else:
-                from .fuzzing import RegressionFuzzingHarness
-                sys.stdout.write(RegressionFuzzingHarness.format_campaign_summary(fuzz_res) + "\n")
-            return 1 if fuzz_res.telemetry.has_regressions else 0
-        except Exception as e:
-            sys.stderr.write(f"[-] Fuzzing campaign failed: {e}\n")
-            return 1
-
-    # Synthetic Mutated Binary Generator Mode
-    if args.gen_mutants:
-        try:
-            mutants = DotNetPackerCore.generate_synthetic_corpus(
-                base_path=args.target,
-                count=args.mutant_count,
-                output_dir=args.output or args.fuzz_out,
-                is_64bit=args.fuzz_64,
-            )
-            if args.format == "json":
-                sys.stdout.write(json.dumps(mutants, indent=2) + "\n")
-            else:
-                sys.stdout.write(f"[+] Generated {len(mutants)} synthetic mutated binaries.\n")
-                for m in mutants:
-                    sys.stdout.write(f"    * [{m['index']:02d}] {m['file_name']} ({m['size_bytes']:,} bytes, {m['mutations_count']} mutations)\n")
-            return 0
-        except Exception as e:
-            sys.stderr.write(f"[-] Synthetic mutant generation failed: {e}\n")
-            return 1
-
-    # Batch Directory Forensic Scanner Mode
-    if args.batch is not None:
-        try:
-            target_dir = args.batch if (args.batch and args.batch != "") else args.target
-            if not target_dir:
-                sys.stderr.write("[-] Error: Target directory for batch scanning is required\n")
-                return 2
-
-            from .batch import BatchForensicEngine, BatchReporter, BatchScanOptions
-            options = BatchScanOptions(
-                target_dir=target_dir,
-                recursive=args.batch_recursive,
-                workers=args.batch_workers,
-                pattern=args.batch_pattern,
-                timeout_sec=args.batch_timeout,
-                min_size_bytes=args.batch_min_size,
-                max_size_bytes=args.batch_max_size,
-                unpack_payloads=bool(args.output or args.unpack_dir),
-                unpack_out_dir=args.output or args.unpack_dir,
-                output_dir=args.batch_out,
-                json_out=args.batch_json,
-                csv_out=args.batch_csv,
-                html_out=args.batch_html,
-                master_key=args.key,
-            )
-            batch_report = BatchForensicEngine.run(options)
-            if args.format == "json":
-                sys.stdout.write(json.dumps(batch_report.to_dict(), indent=2, ensure_ascii=False) + "\n")
-            else:
-                sys.stdout.write(BatchReporter.format_console_table(batch_report) + "\n")
-            return 0
-        except Exception as e:
-            sys.stderr.write(f"[-] Batch forensic scan failed: {e}\n")
-            return 1
+    # Standalone execution modes delegated to cli_subcommands
+    for handler in (handle_fuzz_mode, handle_mutants_mode, handle_batch_mode):
+        res = handler(args)
+        if res is not None:
+            return res
 
     if not args.target:
         parser.print_usage(sys.stderr)
@@ -115,30 +43,9 @@ def main(argv: Optional[list] = None) -> int:
         return 2
 
     # Multi-Engine Binary Diffing Mode
-    if args.diff_target:
-        try:
-            from .diffing import BinaryDiffEngine, BinaryDiffOptions, DiffEngine, HTMLDiffReporter
-            opts = BinaryDiffOptions(engine=DiffEngine(args.diff_engine.lower()), min_similarity_threshold=args.diff_threshold)
-            diff_res = DotNetPackerCore.diff_binaries(args.target, args.diff_target, options=opts)
-            if args.format == "json":
-                sys.stdout.write(json.dumps(diff_res.to_dict(), indent=2) + "\n")
-            else:
-                sys.stdout.write(BinaryDiffEngine.format_text_diff(diff_res) + "\n")
-            if args.diff_out:
-                exp_diff = DotNetPackerCore.export_diff_report(diff_res, output_dir=args.diff_out)
-                sys.stdout.write(f"[+] Exported {exp_diff['files_count']} diff report files to -> {args.diff_out}\n")
-            if args.diff_html:
-                with open(args.diff_html, "w", encoding="utf-8") as f:
-                    f.write(HTMLDiffReporter.generate(diff_res))
-                sys.stdout.write(f"[+] Exported visual HTML diff report to -> {args.diff_html}\n")
-            if args.diff_json:
-                with open(args.diff_json, "w", encoding="utf-8") as f:
-                    json.dump(diff_res.to_dict(), f, indent=2)
-                sys.stdout.write(f"[+] Exported JSON diff summary to -> {args.diff_json}\n")
-            return 0
-        except Exception as e:
-            sys.stderr.write(f"[-] Binary diffing failed: {e}\n")
-            return 1
+    res_diff = handle_diff_mode(args)
+    if res_diff is not None:
+        return res_diff
 
     try:
         report = DotNetPackerCore.analyze_file(args.target, master_key=args.key)
@@ -681,6 +588,41 @@ def main(argv: Optional[list] = None) -> int:
                 sys.stdout.write(f"[+] Exported {len(exp_jit['exported_files'])} JIT capture files to -> {args.jit_out}\n")
         except Exception as e:
             sys.stderr.write(f"[-] JIT compilation tracing failed: {e}\n")
+
+    # .NET Single-File Host (AppHost / Bundle) Unbundler & Volume Mount
+    if args.bundle or args.bundle_out or args.bundle_mount:
+        try:
+            from .bundle import BundleOptions, SingleFileBundleEngine
+            b_opts = BundleOptions(
+                extract_dir=args.bundle_out,
+                file_filter=args.bundle_filter,
+                decompress=not args.bundle_no_decompress,
+            )
+            b_res = DotNetPackerCore.unbundle_file(args.target, options=b_opts)
+            bt = b_res.telemetry
+            sys.stdout.write(
+                f"[+] .NET Single-File Host: {bt.packer_kind.upper()} ({bt.version}) - {bt.total_files} files "
+                f"({bt.assembly_count} asms, {bt.native_count} native, {bt.pdb_count} PDBs)\n"
+            )
+            if bt.bundle_id:
+                sys.stdout.write(f"    Bundle ID: {bt.bundle_id}\n")
+            if args.bundle_mount:
+                vol = DotNetPackerCore.mount_bundle_volume(args.target)
+                if vol:
+                    sys.stdout.write("\n--- [Mounted Virtual Bundle Volume Tree] ---\n")
+                    sys.stdout.write(vol.render_tree() + "\n")
+            if b_res.entries:
+                sys.stdout.write(f"\n--- [Bundled Files: {len(b_res.entries)}] ---\n")
+                for be in b_res.entries[:12]:
+                    comp_info = f" -> {be.compressed_size:,}b" if be.is_compressed else ""
+                    sys.stdout.write(f"  * [{be.file_type.value:<14}] {be.relative_path} ({be.size:,}b{comp_info})\n")
+                if len(b_res.entries) > 12:
+                    sys.stdout.write(f"  ... and {len(b_res.entries) - 12} more files\n")
+            if args.bundle_out:
+                exp_b = SingleFileBundleEngine.export_to_directory(b_res, output_dir=args.bundle_out)
+                sys.stdout.write(f"[+] Exported {exp_b['extracted_count']} files and manifest to -> {args.bundle_out}\n")
+        except Exception as e:
+            sys.stderr.write(f"[-] Single-file bundle extraction failed: {e}\n")
 
     if args.format == "json":
         sys.stdout.write(json.dumps(report, indent=2) + "\n")

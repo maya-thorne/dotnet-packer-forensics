@@ -507,6 +507,34 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Reconstruct and export patched PE binary with captured CIL methods in .jitcapt section",
     )
+    # .NET Single-File Host (AppHost / Bundle) & Superpacker Unbundling
+    parser.add_argument(
+        "--bundle",
+        "--unbundle",
+        dest="bundle",
+        action="store_true",
+        help="Extract and unbundle embedded assemblies and resources from .NET Single-File Host (AppHost)",
+    )
+    parser.add_argument(
+        "--bundle-out",
+        help="Directory path to carve and export unbundled single-file assemblies and manifest",
+    )
+    parser.add_argument(
+        "--bundle-filter",
+        choices=["all", "assemblies", "native", "symbols", "configs"],
+        default="all",
+        help="Filter subset of bundled files to extract (default: 'all')",
+    )
+    parser.add_argument(
+        "--bundle-mount",
+        action="store_true",
+        help="Mount single-file host and display virtual volume filesystem directory tree",
+    )
+    parser.add_argument(
+        "--bundle-no-decompress",
+        action="store_true",
+        help="Skip decompressing compressed bundle payload streams",
+    )
     parser.add_argument(
         "--format", choices=["text", "json"], default="text", help="Telemetry format (text or json)"
     )
